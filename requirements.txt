@@ -5,3 +5,4 @@ requests
 anthropic
 mammoth
 PyPDF2
+webdriver-manager
