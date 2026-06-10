@@ -1,0 +1,37 @@
+Here's the complete `selenium_config.py` file with all your Chrome options:Now, here's how you would update your `SeleniumJobScraper` class in `complete_selenium_scraper.py`:
+
+**1. Add the import at the top of the file:**
+```python
+from selenium_config import SeleniumConfig
+```
+
+**2. Replace your existing `setup_driver` method with this simplified version:**
+```python
+def setup_driver(self):
+    """Initialize Chrome WebDriver with optimized options"""
+    try:
+        chrome_options = SeleniumConfig.get_chrome_options(self.headless)
+        
+        # Try to find chromedriver
+        try:
+            self.driver = webdriver.Chrome(options=chrome_options)
+        except:
+            self.driver = webdriver.Chrome('./chromedriver.exe', options=chrome_options)
+        
+        # Apply standard timeouts and settings
+        SeleniumConfig.setup_driver_timeouts(self.driver)
+        
+        self.logger.info("Optimized Selenium WebDriver initialized")
+        
+    except Exception as e:
+        self.logger.error(f"Failed to initialize WebDriver: {e}")
+        raise
+```
+
+This approach:
+- Moves all the Chrome configuration to a reusable file
+- Keeps the driver creation and error handling in your scraper class
+- Makes it easy to use the same optimized settings across multiple scrapers
+- Reduces the size of your main scraper file significantly
+
+The configuration class can now be imported and used by any scraper script you create in the future!

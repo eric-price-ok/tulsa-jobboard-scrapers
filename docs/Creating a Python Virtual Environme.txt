@@ -1,0 +1,28 @@
+Creating a Python Virtual Environment
+
+Step 1: Navigate to your project directory
+cd c:\working
+
+Step 2: Create the virtual environment
+python -m venv tulsa_jobs_env
+This creates a folder called tulsa_jobs_env that will contain your isolated Python environment. Technically you can call your environment whatever you like
+
+Step 3: Activate the virtual environment
+tulsa_jobs_env\Scripts\activate
+
+Step 4: Verify activation
+When activated, you should see (venv) at the beginning of your command prompt, like:
+(tulsa_jobs_env) C:\working>
+
+Step 5: Install required packages
+Your project needs several packages. Install them with:
+pip install selenium beautifulsoup4 psycopg requests anthropic
+
+Step 6: Create a requirements.txt file (optional but recommended)
+pip freeze > requirements.txt
+
+Deactivating the environment
+When you're done working, deactivate with:
+bashdeactivate
+
+The script also assumes you'll use set POSTGRES_PASSWORD=whateveritis before running the scripts

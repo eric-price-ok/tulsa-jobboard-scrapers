@@ -1,0 +1,45 @@
+Incorporating db_connection.py
+
+In your existing scrapers replace this pattern
+
+In your existing scrapers, you can now replace this pattern:
+
+pythonclass DatabaseManager:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+        self.conn = None
+        self.connect()
+    
+    def connect(self):
+        try:
+            self.conn = psycopg.connect(self.connection_string, row_factory=dict_row)
+            self.conn.autocommit = True
+            logger.info("Connected to PostgreSQL database")
+        except Exception as e:
+            logger.error(f"Failed to connect to database: {e}")
+            raise
+
+with this
+
+from db_connection import get_database_connection, close_connection (at the top)
+
+class DatabaseManager:
+    def __init__(self, connection_string: str):
+        self.connection_string = connection_string
+        self.conn = get_database_connection(connection_string)
+
+Also delete this from the main class. Its handled as part of dbconnection now
+
+# Get password from environment variable
+db_password = os.getenv('POSTGRES_PASSWORD')
+if not db_password:
+    logger.error("Please set POSTGRES_PASSWORD environment variable")
+    logger.error("Example: set POSTGRES_PASSWORD=your_password")
+    return 1
+
+db_connection = f"postgresql://postgres:{db_password}@localhost:5432/tulsa_jobs"
+
+And Change this line:
+pythondb_manager = DatabaseManager(db_connection)
+To:
+pythondb_manager = DatabaseManager()

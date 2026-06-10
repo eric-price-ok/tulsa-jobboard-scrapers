@@ -1,0 +1,24 @@
+Incorporating mark_stale_jobs_closed 
+
+
+**Import the function** (add to existing imports):
+from posting_operations import store_job_listing, load_active_jobs_cache, check_job_in_cache, update_job_verified_timestamp, mark_stale_jobs_closed
+
+**Remove the existing method** from the `DatabaseManager` class:
+Delete the entire `mark_stale_jobs_closed` method from the `DatabaseManager` class.
+
+**Update the scrape_jobs method** (around line where it calls the method):
+Replace this:
+```python
+# Step 4: Mark stale jobs as closed
+self.logger.info("Step 4: Marking stale jobs as closed...")
+self.db.mark_stale_jobs_closed(self.company_id)
+```
+
+With this:
+```python
+# Step 4: Mark stale jobs as closed
+self.logger.info("Step 4: Marking stale jobs as closed...")
+with self.db.conn.cursor() as cursor:
+    mark_stale_jobs_closed(cursor, self.company_id, self.logger)
+```

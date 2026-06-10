@@ -1,0 +1,49 @@
+incorporating company_operations.py
+
+from company_operations import get_or_create_company
+
+(methods also written for get_company_by_id, get_company_by_name, update_company_website, update_company_jobboard)
+
+
+If your scraper has a get_or_create_company method
+
+Replace methods in your original scraper that looked like 
+
+def get_or_create_company(self, company_data: Dict) -> int:
+    with self.conn.cursor() as cursor:
+        # ... existing implementation
+
+with
+
+with self.conn.cursor() as cursor:
+    company_id = get_or_create_company(cursor, company_config)
+
+
+On scrapers where the company_id is hardcoded
+
+Replace 
+
+self.company_config = {
+            'id': 859,  # Melton company ID
+            'job_board_url': 'https://recruiting.ultipro.com/HAW1002HAWTH/JobBoard/00f46cc2-cbba-4ea8-b35a-4a21e4d97ed2/?q=&o=postedDateDesc&f4=0GneTPzQnFGO9qjSYQbXsw'
+}
+
+with 
+
+        self.company_config = {
+            'name': 'Melton Truck Lines',  # or whatever the actual company name is
+            'website': 'https://meltontrucklines.com',  # actual company website
+            'jobboard': 'https://recruiting.ultipro.com/HAW1002HAWTH/JobBoard/00f46cc2-cbba-4ea8-b35a-4a21e4d97ed2/?q=&o=postedDateDesc&f4=0GneTPzQnFGO9qjSYQbXsw'
+        }
+
+In scrape_jobs() replace
+
+company_id = self.company_config['id']
+
+with
+
+# Step 1: Get/create company
+logger.info("Step 1: Getting/creating company...")
+with self.db.conn.cursor() as cursor:
+    company_id = get_or_create_company(cursor, self.company_config)
+logger.info(f"✓ Company ID: {company_id}")

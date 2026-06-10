@@ -1,0 +1,33 @@
+Incorporating utility_methods.py
+
+from utility_methods import setup_logging
+
+Replace the logging configuration block (probably in the CompanyNameUltiproScraper class) with:
+
+pythonclass MeltonUltiProScraper:
+    def __init__(self, db_manager: DatabaseManager):
+        self.db = db_manager
+        self.selenium_scraper = SeleniumJobScraper(headless=True)
+        
+        self.company_config = {
+            'name': 'Melton Truck Lines',
+            'website': 'https://meltontrucklines.com',
+            'jobboard': 'https://recruiting.ultipro.com/HAW1002HAWTH/JobBoard/...'
+        }
+        
+        # Configure logging using company name
+        self.logger = setup_logging(self.company_config['name'])
+
+
+Delete this (usually at the top)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('melton_scraper.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)

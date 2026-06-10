@@ -1,0 +1,34 @@
+Incorporating date_utilities.py
+
+Include this at the top
+from date_utilities import parse_relative_date, format_date_for_db, get_cutoff_date
+
+
+from date_utilities import normalize_date_string
+
+# Import everything you might need
+from date_utilities import (
+    parse_relative_date, 
+    format_date_for_db, 
+    parse_workday_date,
+    normalize_date_string, 
+    is_recent_date, 
+    calculate_days_ago,
+    get_cutoff_date
+)
+
+
+
+Replace these methods:
+
+Remove your parse_posted_date() method entirely
+
+Replace calls like 
+self.parse_posted_date(job.get('postedOn', '')) 
+with 
+parse_relative_date(job.get('postedOn', ''))
+
+Replace 
+cutoff_date = datetime.now() - timedelta(days=7) 
+with 
+cutoff_date = get_cutoff_date(7)
