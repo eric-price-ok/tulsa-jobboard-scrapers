@@ -39,15 +39,15 @@ If snap Chromium was previously installed, remove it first:
 sudo snap remove chromium
 ```
 
-### 4. Install the PostgreSQL client
+### 4. Install the PostgreSQL client (optional)
 
-Required to run `psql` commands directly from the host:
+Only needed if you want to run `psql` directly from the host. The database runs inside Docker, so `docker exec` (see Useful SQL Commands below) works without this.
 
 ```bash
-sudo apt install -y postgresql-client-common
+sudo apt install -y postgresql-client
 ```
 
-Note: the PostgreSQL database runs inside Docker. Use `docker exec` to run SQL commands against it (see Useful SQL Commands section below) — direct `psql` from the host requires the port binding in step 5.
+Note: `postgresql-client-common` alone does not provide the `psql` binary — you need `postgresql-client` (without a version number; apt picks the right one).
 
 ### 5. Expose PostgreSQL to the host (optional)
 
