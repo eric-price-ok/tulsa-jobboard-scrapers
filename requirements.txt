@@ -1,5 +1,7 @@
 selenium
 beautifulsoup4
-psycopg
+psycopg[binary]
 requests
 anthropic
+mammoth
+PyPDF2

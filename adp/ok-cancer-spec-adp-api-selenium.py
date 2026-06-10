@@ -7,6 +7,7 @@ Combines API calls with targeted Selenium scraping for job descriptions
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -326,11 +327,7 @@ class SeleniumJobScraper:
             
             chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
             
-            # Try to find chromedriver
-            try:
-                self.driver = webdriver.Chrome(options=chrome_options)
-            except:
-                self.driver = webdriver.Chrome('./chromedriver.exe', options=chrome_options)
+            self.driver = webdriver.Chrome(service=Service(), options=chrome_options)
             
             # Reduce implicit wait time
             self.driver.implicitly_wait(5)
