@@ -23,6 +23,7 @@ from typing import Dict, List, Optional
 import requests
 import json
 import os
+from utils.company_operations import get_or_create_company
 
 # Configure logging
 logging.basicConfig(
@@ -88,8 +89,8 @@ class DatabaseManager:
                     company_id, job_title, job_description, posting_url,
                     source_job_board, date_posted, scraping_hash,
                     function, job_type_id, minimum_salary, maximum_salary,
-                    pay_frequency, job_status_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    pay_frequency, external_job_id, job_status_id
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                          (SELECT id FROM jobstatus WHERE name = 'active'))
                 RETURNING id
             """, (
@@ -105,6 +106,7 @@ class DatabaseManager:
                 job_data.get('minimum_salary'),
                 job_data.get('maximum_salary'),
                 job_data.get('pay_frequency'),
+                job_data.get('external_job_id'),
             ))
             
             result = cursor.fetchone()
@@ -244,16 +246,22 @@ class DatabaseManager:
             if closed_count > 0:
                 logger.info(f"Marked {closed_count} stale jobs as closed")
     
-    def log_scraping_activity(self, job_board: str, stats: Dict):
+    def resolve_company_id(self, company_data: Dict) -> int:
+        """Look up company by name, create if missing, return ID"""
+        with self.conn.cursor() as cursor:
+            return get_or_create_company(cursor, company_data)
+
+    def log_scraping_activity(self, job_board: str, company_id: int, stats: Dict):
         """Log scraping results"""
         with self.conn.cursor() as cursor:
             cursor.execute("""
                 INSERT INTO scrapinglog (
-                    job_board, jobs_found, jobs_added, jobs_updated,
+                    job_board, company_id, jobs_found, jobs_added, jobs_updated,
                     jobs_skipped, errors, status
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 job_board,
+                company_id,
                 stats.get('found', 0),
                 stats.get('added', 0),
                 stats.get('updated', 0),
@@ -397,8 +405,6 @@ class OKCancerSpecialistsJobScraper:
             'cid': '0344be4a-d36c-4b1f-b96f-8354590ef7dc',
             'ccId': '19000101_000001'
         }
-        
-        self.company_id = 911
         
         # Set up session headers for API calls
         self.session.headers.update({
@@ -588,8 +594,15 @@ class OKCancerSpecialistsJobScraper:
         }
         
         try:
-            # Step 1: Use hardcoded company ID
-            logger.info(f"Step 1: Using company ID: {self.company_id}")
+            # Step 1: Resolve company ID from database
+            logger.info("Step 1: Resolving company ID...")
+            self.company_id = self.db.resolve_company_id({
+                'name': self.company_config['name'],
+                'website': self.company_config['website'],
+                'jobboard': self.company_config['jobboard_url'],
+                'company_type_name': 'Non-Profit'
+            })
+            logger.info(f"  Resolved company ID: {self.company_id}")
             
             # Step 2: Get job listings from API
             logger.info("Step 2: Getting job listings from API...")
@@ -644,6 +657,7 @@ class OKCancerSpecialistsJobScraper:
                         'maximum_salary': api_data['maximum_salary'],
                         'pay_frequency': api_data['pay_frequency'],
                         'job_type': api_data['job_type'],
+                        'external_job_id': api_data['external_job_id'],
                         'scraping_hash': self.create_scraping_hash({
                             'title': api_data['title'],
                             'url': job_url,
@@ -676,7 +690,7 @@ class OKCancerSpecialistsJobScraper:
             
             # Step 7: Log results
             logger.info("Step 7: Logging results...")
-            self.db.log_scraping_activity('Oklahoma Cancer Specialists ADP', stats)
+            self.db.log_scraping_activity('Oklahoma Cancer Specialists ADP', self.company_id, stats)
             
         except Exception as e:
             error_msg = f"Scraping failed: {e}"
