@@ -116,33 +116,38 @@ python adp/ok-cancer-spec-adp-api-selenium.py
 
 ## Useful SQL Commands
 
-All SQL is run through the Docker db container — no host port binding required:
+All SQL is run through the Docker db container. The database password is required — pull it from the `.env` file using `-e PGPASSWORD=...` so you never have to type it:
 
 ```bash
-docker exec -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot -c "<SQL HERE>"
+docker exec -e PGPASSWORD=$(grep POSTGRES_PASSWORD /home/deploy/tulsajobspot/.env | cut -d= -f2) \
+  -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot -c "<SQL HERE>"
 ```
 
 **Check recent scraping log entries:**
 ```bash
-docker exec -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
+docker exec -e PGPASSWORD=$(grep POSTGRES_PASSWORD /home/deploy/tulsajobspot/.env | cut -d= -f2) \
+  -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
   -c "SELECT job_board, jobs_found, jobs_added, jobs_updated, status, started_at FROM scrapinglog ORDER BY started_at DESC LIMIT 5;"
 ```
 
 **Check pending (unapproved) jobs:**
 ```bash
-docker exec -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
+docker exec -e PGPASSWORD=$(grep POSTGRES_PASSWORD /home/deploy/tulsajobspot/.env | cut -d= -f2) \
+  -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
   -c "SELECT id, job_title, created_at FROM joblistings WHERE approved=false ORDER BY created_at DESC LIMIT 20;"
 ```
 
 **Delete jobs from a specific scraper (e.g. to re-scrape with fixes):**
 ```bash
-docker exec -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
+docker exec -e PGPASSWORD=$(grep POSTGRES_PASSWORD /home/deploy/tulsajobspot/.env | cut -d= -f2) \
+  -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
   -c "DELETE FROM joblistings WHERE source_job_board = 'Oklahoma Cancer Specialists ADP';"
 ```
 
 **Wipe all job listings and reset the ID sequence (full reset on a fresh DB):**
 ```bash
-docker exec -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
+docker exec -e PGPASSWORD=$(grep POSTGRES_PASSWORD /home/deploy/tulsajobspot/.env | cut -d= -f2) \
+  -it tulsajobspot-db-1 psql -U tulsajobspot -d tulsajobspot \
   -c "TRUNCATE TABLE joblistings RESTART IDENTITY;"
 ```
 

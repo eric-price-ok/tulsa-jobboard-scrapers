@@ -26,6 +26,7 @@ import requests
 import json
 import os
 from utils.company_operations import get_or_create_company
+from utils.utility_methods import normalize_job_type
 
 # Configure logging
 logging.basicConfig(
@@ -178,33 +179,18 @@ class DatabaseManager:
         return None
     
     def _map_job_type(self, work_level_code: str) -> Optional[int]:
-        """Map ADP work level to job_type_id using LIKE matching"""
-        if not work_level_code:
+        """Map ADP work level to job_type_id via normalize_job_type utility"""
+        canonical = normalize_job_type(work_level_code)
+        if not canonical:
+            logger.warning(f"  Could not map '{work_level_code}' to any job type")
             return None
-            
-        work_level_lower = work_level_code.lower()
-        
-        # Define job type mappings
-        job_type_mappings = {
-            'Full Time': ['full time', 'full-time'],
-            'Part Time': ['part time', 'part-time'],
-            'Contract': ['contract', 'contractor'],
-            'Temporary': ['temporary', 'temp'],
-            'Internship': ['intern', 'internship'],
-            'Seasonal': ['seasonal']
-        }
-        
-        for job_type_name, keywords in job_type_mappings.items():
-            for keyword in keywords:
-                if keyword in work_level_lower:
-                    with self.conn.cursor() as cursor:
-                        cursor.execute("SELECT id FROM jobtype WHERE name LIKE %s", (f"%{job_type_name}%",))
-                        result = cursor.fetchone()
-                        if result:
-                            logger.info(f"  Mapped '{work_level_code}' to job type: {job_type_name}")
-                            return result['id']
-        
-        logger.warning(f"  Could not map '{work_level_code}' to any job type")
+        with self.conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM jobtype WHERE name = %s", (canonical,))
+            result = cursor.fetchone()
+            if result:
+                logger.info(f"  Mapped '{work_level_code}' to job type: {canonical}")
+                return result['id']
+        logger.warning(f"  Job type '{canonical}' not found in database")
         return None
     
     def update_company_scrape_completed(self, company_id: int):
@@ -567,9 +553,21 @@ class OKCancerSpecialistsJobScraper:
             # Remove unwanted elements
             for tag in body.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
                 tag.decompose()
-            
-            # Get text content
-            description = body.get_text(strip=True)
+
+            # Preserve paragraph structure
+            for br in body.find_all('br'):
+                br.replace_with('\n')
+
+            description = body.get_text(separator='\n', strip=True)
+
+            # Strip everything from Copyright onwards
+            copyright_idx = description.lower().find('copyright')
+            if copyright_idx != -1:
+                description = description[:copyright_idx]
+
+            # Collapse excessive blank lines
+            description = re.sub(r'\n{3,}', '\n\n', description).strip()
+
             logger.info(f"  Extracted job description: {len(description)} characters")
             return description
             
