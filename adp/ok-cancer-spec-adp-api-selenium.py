@@ -320,6 +320,7 @@ class SeleniumJobScraper:
             chrome_options.add_argument('--disable-logging')
             chrome_options.add_argument('--disable-gpu-logging')
             chrome_options.add_argument('--disable-extensions-http-throttling')
+            chrome_options.add_argument('--disable-blink-features=AutomationControlled')
             chrome_options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
             chrome_options.add_experimental_option('useAutomationExtension', False)
             
