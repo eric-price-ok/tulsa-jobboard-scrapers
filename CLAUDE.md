@@ -84,9 +84,11 @@ These have caused bugs in the past — check every scraper against them:
 1. **Lowercase table names**: `joblistings`, `jobstatus`, `company`, `companysite`, `scrapinglog`, `functions`, `jobtype`. PascalCase names are wrong.
 2. **Never set `approved=True`** in any INSERT. Omit the column — the DB default is `false`. Admin reviews the pending queue.
 3. **Look up `job_status_id` by name**, never hardcode an integer: `SELECT id FROM jobstatus WHERE name = 'active'` (lowercase status names).
-4. **No `city` text column on `companysite`** — it was removed. Use `city_id` (FK to `cities` table) only.
+4. **No `city` text column on `companysite`** — it was removed. Use `city_id` (FK to `cities` table) only. Same applies to `joblistings.city_id`.
 5. **Country/state IDs**: look up by name, never assume ID 1: `SELECT id FROM country WHERE iso_code_2 = 'US'`, `SELECT id FROM state WHERE name = 'Oklahoma'`.
 6. **Update both `updated_at` and `last_scraped`** when a previously-seen job is confirmed still live.
+7. **`cities.city_name`** — the city name column is `city_name`, not `name`. Query: `SELECT id FROM cities WHERE city_name = %s`.
+8. **`scrapinglog` count constraint** — `(jobs_added + jobs_updated + jobs_skipped) <= jobs_found` is enforced by a CHECK constraint. Do not count the same job in multiple buckets.
 
 ## Updating an Existing Scraper (Checklist)
 

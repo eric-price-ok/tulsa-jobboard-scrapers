@@ -57,7 +57,7 @@ def get_city_id(cursor, city_name: str) -> Optional[int]:
     cursor.execute("""
         SELECT c.id FROM cities c
         JOIN state s ON c.state_id = s.id
-        WHERE c.name = %s AND s.name = 'Oklahoma'
+        WHERE c.city_name = %s AND s.name = 'Oklahoma'
     """, (city_name,))
     result = cursor.fetchone()
     if result:
