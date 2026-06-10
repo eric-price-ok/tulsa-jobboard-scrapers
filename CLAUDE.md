@@ -51,6 +51,7 @@ Most scrapers are currently Gen 1. When converting or updating a Gen 1 scraper, 
 | `utils/posting_operations.py` | `store_job_listing()`, `check_existing_job_by_url()`, `load_active_jobs_cache()`, `mark_stale_jobs_closed()` |
 | `utils/company_operations.py` | `get_or_create_company()`, `get_or_create_company_site()` |
 | `utils/date_utilities.py` | `parse_relative_date()`, `parse_workday_date()`, `normalize_date_string()` |
+| `utils/location_utilities.py` | `find_served_city()`, `get_city_id()`, `match_location_to_city_id()`, `TULSA_METRO_CITIES` |
 | `utils/utility_methods.py` | `setup_logging()` — creates `{company}_scraper.log` per run |
 | `utils/selenium_config.py` | `SeleniumConfig.get_chrome_options()` — headless, anti-detection, eager load |
 

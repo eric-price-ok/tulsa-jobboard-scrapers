@@ -26,6 +26,7 @@ from utils.posting_operations import check_existing_job_by_url, store_job_listin
 from utils.company_operations import get_or_create_company
 from utils.utility_methods import normalize_job_type
 from utils.selenium_config import SeleniumConfig
+from utils.location_utilities import find_served_city, get_city_id
 
 logging.basicConfig(
     level=logging.INFO,
@@ -51,9 +52,9 @@ _FUNCTION_KEYWORDS = {
         'scheduler', 'scheduling', 'receptionist', 'clerk', 'registration'
     ],
     'Information Technology': [
-        'software', 'developer', 'programmer', 'engineer', 'tech', 'it ', 'data',
+        'software', 'developer', 'programmer', 'engineer', 'data',
         'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
-        'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile'
+        'application', 'web', 'mobile', 'qa', 'scrum', 'agile'
     ],
     'Finance': [
         'finance', 'financial', 'accounting', 'accountant', 'treasury',
@@ -255,25 +256,24 @@ class OKCancerSpecialistsJobScraper:
             logger.error(f"Error fetching jobs from API: {e}")
             return []
 
-    def filter_tulsa_jobs(self, jobs: List[Dict]) -> List[Dict]:
-        """Filter jobs for Tulsa location"""
+    def filter_served_city_jobs(self, jobs: List[Dict]) -> List[Dict]:
+        """Filter jobs to those located in a served city"""
         filtered = []
-        logger.info(f"Filtering {len(jobs)} jobs for Tulsa location...")
+        logger.info(f"Filtering {len(jobs)} jobs for served cities...")
 
         for job in jobs:
             locations = job.get('requisitionLocations', [])
             for location in locations:
-                name_code = location.get('nameCode', {})
-                short_name = name_code.get('shortName', '').strip()
-                address = location.get('address', {})
-                city_name = address.get('cityName', '').strip()
+                short_name = location.get('nameCode', {}).get('shortName', '').strip()
+                city_name = location.get('address', {}).get('cityName', '').strip()
 
-                if 'Tulsa' in short_name or 'Tulsa' in city_name:
+                matched = find_served_city(city_name) or find_served_city(short_name)
+                if matched:
                     filtered.append(job)
-                    logger.info(f"  ✓ Found Tulsa job: {job.get('requisitionTitle', 'Unknown')} at {short_name or city_name}")
+                    logger.info(f"  ✓ {matched}: {job.get('requisitionTitle', 'Unknown')}")
                     break
 
-        logger.info(f"Found {len(filtered)} Tulsa jobs")
+        logger.info(f"Found {len(filtered)} jobs in served cities")
         return filtered
 
     def extract_api_job_data(self, job: Dict) -> Dict:
@@ -286,7 +286,8 @@ class OKCancerSpecialistsJobScraper:
                 'minimum_salary': None,
                 'maximum_salary': None,
                 'pay_frequency': None,
-                'job_type': job.get('workLevelCode', {}).get('shortName', '')
+                'job_type': job.get('workLevelCode', {}).get('shortName', ''),
+                'city': None,
             }
 
             string_fields = job.get('customFieldGroup', {}).get('stringFields', [])
@@ -310,6 +311,14 @@ class OKCancerSpecialistsJobScraper:
                     job_data['minimum_salary'] = min_rate['amountValue']
                 if max_rate and 'amountValue' in max_rate:
                     job_data['maximum_salary'] = max_rate['amountValue']
+
+            for location in job.get('requisitionLocations', []):
+                city_name = location.get('address', {}).get('cityName', '').strip()
+                short_name = location.get('nameCode', {}).get('shortName', '').strip()
+                matched = find_served_city(city_name) or find_served_city(short_name)
+                if matched:
+                    job_data['city'] = matched
+                    break
 
             return job_data
 
@@ -395,13 +404,13 @@ class OKCancerSpecialistsJobScraper:
                 if not all_jobs:
                     raise Exception("No jobs retrieved from API")
 
-                # Step 3: Filter for Tulsa jobs
-                logger.info("Step 3: Filtering for Tulsa jobs...")
-                tulsa_jobs = self.filter_tulsa_jobs(all_jobs)
+                # Step 3: Filter for served-city jobs
+                logger.info("Step 3: Filtering for served cities...")
+                tulsa_jobs = self.filter_served_city_jobs(all_jobs)
                 stats['found'] = len(tulsa_jobs)
 
                 if not tulsa_jobs:
-                    logger.warning("No Tulsa jobs found")
+                    logger.warning("No jobs found in served cities")
                     return stats
 
                 # Step 4: Process each job
@@ -428,6 +437,8 @@ class OKCancerSpecialistsJobScraper:
                             stats['skipped'] += 1
                             continue
 
+                        city_id = get_city_id(cursor, api_data['city']) if api_data.get('city') else None
+
                         job_data = {
                             'job_title': api_data['title'],
                             'job_description': job_description,
@@ -443,6 +454,7 @@ class OKCancerSpecialistsJobScraper:
                             ),
                             'function': _map_job_to_function(cursor, api_data['title']),
                             'job_type_id': _map_job_type(cursor, api_data.get('job_type', '')),
+                            'city_id': city_id,
                         }
 
                         job_id = store_job_listing(cursor, job_data, company_id)
