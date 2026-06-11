@@ -53,7 +53,7 @@
 | Company | File | Gen | Status |
 |---------|------|-----|--------|
 | Berendsen | `ultipro/berendsen-ultipro-selenium-scrape.py` | Gen 1+ | Unconfirmed |
-| Family & Children's Services | `ultipro/familycs-ultipro-selenium-scrape.py` | Gen 1+ | Unconfirmed |
+| Family & Children's Services | `ultipro/familycs-ultipro-selenium-scrape.py` | Gen 2 | Unconfirmed |
 | Flintco | `ultipro/flintco-ultipro-selenium-scrape.py` | Gen 1+ | Unconfirmed |
 | Levare | `ultipro/levare-ultipro-selenium-scrape.py` | Gen 1+ | Unconfirmed |
 | Mathis Brothers | `ultipro/mathis-ultipro-selenium-scrape.py` | Gen 1+ | Unconfirmed |

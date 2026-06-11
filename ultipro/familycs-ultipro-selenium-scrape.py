@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
 """
-familycs_ultipro_scraper.py
-familycs UltiPro Job Board Scraper
-Handles UltiPro job boards with Selenium for full job description extraction
+familycs-ultipro-selenium-scrape.py
+Family & Children's Services UltiPro Job Board Scraper
+Selenium-based extraction using data-automation selectors
 """
 
-from utils.date_utilities import normalize_date_string
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, WebDriverException
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 import time
 import hashlib
-import psycopg
-from psycopg.rows import dict_row
 import re
-from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import logging
 from typing import Dict, List, Optional
-import os
 
-# Configure logging
+from utils.db_connection import get_database_connection, close_connection
+from utils.posting_operations import check_existing_job_by_url, store_job_listing, mark_stale_jobs_closed
+from utils.company_operations import get_company_config_by_name, get_or_create_company_site
+from utils.utility_methods import normalize_job_type
+from utils.selenium_config import SeleniumConfig
+from utils.date_utilities import normalize_date_string
+from utils.location_utilities import find_served_city, get_city_id
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -34,744 +37,518 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class DatabaseManager:
-    """Handles all PostgreSQL database operations"""
-    
-    def __init__(self, connection_string: str):
-        self.connection_string = connection_string
-        self.conn = None
-        self.company_site_cache = {}  # Cache for company sites by company_id
-        self.connect()
-    
-    def connect(self):
-        """Establish database connection"""
-        try:
-            self.conn = psycopg.connect(self.connection_string, row_factory=dict_row)
-            self.conn.autocommit = True
-            logger.info("Connected to PostgreSQL database")
-        except Exception as e:
-            logger.error(f"Failed to connect to database: {e}")
-            raise
-    
-    def load_company_sites_cache(self, company_id: int):
-        """Load all company sites for a given company into cache"""
-        if company_id in self.company_site_cache:
-            return  # Already cached
-        
-        with self.conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT id, shortname FROM CompanySite 
-                WHERE company_id = %s
-            """, (company_id,))
-            
-            sites = cursor.fetchall()
-            # Create a dictionary mapping shortname to id
-            self.company_site_cache[company_id] = {site['shortname']: site['id'] for site in sites}
-            logger.info(f"Loaded {len(sites)} company sites into cache for company {company_id}")
-    
-    def get_or_create_company_site(self, company_id: int, location_description: str) -> int:
-        """Get existing company site ID or create new one based on location description"""
-        # Ensure cache is loaded for this company
-        self.load_company_sites_cache(company_id)
-        
-        # Check cache first
-        if location_description in self.company_site_cache[company_id]:
-            site_id = self.company_site_cache[company_id][location_description]
-            logger.info(f"  Found cached company site ID: {site_id} for '{location_description}'")
-            return site_id
-        
-        # Not in cache, create new company site
-        with self.conn.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO CompanySite (company_id, shortname, site_type)
-                VALUES (%s, %s, %s)
-                RETURNING id
-            """, (company_id, location_description, 8))
-            
-            result = cursor.fetchone()
-            new_site_id = result['id']
-            
-            # Add to cache
-            self.company_site_cache[company_id][location_description] = new_site_id
-            
-            logger.info(f"  Created new company site ID: {new_site_id} for '{location_description}'")
-            return new_site_id
-    
-    def check_existing_job(self, job_url: str) -> Optional[int]:
-        """Check if job URL already exists, update timestamp if found"""
-        with self.conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT id FROM JobListings 
-                WHERE posting_url = %s
-            """, (job_url,))
-            
-            existing = cursor.fetchone()
-            if existing:
-                # Update the updated_at timestamp and skip scraping
-                cursor.execute("""
-                    UPDATE JobListings 
-                    SET updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = %s
-                """, (existing['id'],))
-                logger.info(f"  Job already exists (ID: {existing['id']}), updated timestamp")
-                return existing['id']
-            return None
-    
-    def store_job_listing(self, job_data: Dict, company_id: int) -> int:
-        """Store new job listing, return job listing ID"""
-        with self.conn.cursor() as cursor:
-            # Map categorical fields
-            job_type_id = self._map_job_type(job_data.get('schedule', ''))
-            function = self._map_job_function(job_data.get('job_category', ''))
-            office_location_id = self._map_office_location(job_data.get('location_type', ''))
-            
-            # Insert new job
-            cursor.execute("""
-                INSERT INTO JobListings (
-                    company_id, job_title, job_description, posting_url, posting_id, company_site_id,
-                    source_job_board, date_posted, scraping_hash, 
-                    function, job_type_id, office_location_id, minimum_salary, maximum_salary,
-                    pay_frequency, approved, city_id, job_status_id
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-            """, (
-                company_id,
-                job_data['job_title'],
-                job_data['job_description'],
-                job_data['posting_url'],
-                job_data['posting_id'],
-                job_data['company_site_id'],  # Now using dynamic value
-                'familycs UltiPro',
-                job_data['date_posted'],
-                job_data['scraping_hash'],
-                function,
-                job_type_id,
-                office_location_id,
-                job_data.get('minimum_salary'),
-                job_data.get('maximum_salary'),
-                job_data.get('pay_frequency'),
-                False,
-                12,
-                1
-            ))
-            
-            result = cursor.fetchone()
-            job_id = result['id']
-            logger.info(f"Created new job: {job_data['job_title']} (ID: {job_id})")
-            return job_id
-    
-    def _map_job_type(self, schedule: str) -> Optional[int]:
-        """Map schedule to job_type_id using LIKE matching"""
-        if not schedule:
-            return None
-            
-        schedule_lower = schedule.lower()
-        
-        with self.conn.cursor() as cursor:
-            # Try exact match first
-            cursor.execute("SELECT id FROM JobType WHERE LOWER(name) LIKE %s", (f"%{schedule_lower}%",))
-            result = cursor.fetchone()
-            if result:
-                logger.info(f"  Mapped '{schedule}' to job type ID: {result['id']}")
-                return result['id']
-            
-            # Try common variations
-            schedule_mappings = {
-                'full time': ['full time', 'full-time', 'fulltime'],
-                'part time': ['part time', 'part-time', 'parttime'],
-                'contract': ['contract', 'contractor'],
-                'temporary': ['temporary', 'temp'],
-                'internship': ['intern', 'internship'],
-                'seasonal': ['seasonal']
-            }
-            
-            for job_type_key, variations in schedule_mappings.items():
-                if any(var in schedule_lower for var in variations):
-                    cursor.execute("SELECT id FROM JobType WHERE LOWER(name) LIKE %s", (f"%{job_type_key}%",))
-                    result = cursor.fetchone()
-                    if result:
-                        logger.info(f"  Mapped '{schedule}' to job type ID: {result['id']} via '{job_type_key}'")
-                        return result['id']
-        
+# Social services / non-profit focused function keyword mapping
+_FUNCTION_KEYWORDS = {
+    'Social Work': [
+        'social worker', 'case manager', 'case management', 'family services',
+        'child welfare', 'foster care', 'adoption', 'outreach', 'family support'
+    ],
+    'Counseling': [
+        'counselor', 'therapist', 'therapy', 'mental health', 'behavioral health',
+        'substance abuse', 'crisis', 'clinical', 'psychologist'
+    ],
+    'Healthcare': [
+        'nurse', 'nursing', 'medical', 'health', 'physician', 'doctor',
+        'care coordinator', 'patient'
+    ],
+    'Education': [
+        'teacher', 'educator', 'instructor', 'trainer', 'tutor', 'youth',
+        'early childhood', 'childcare'
+    ],
+    'Information Technology': [
+        'software', 'developer', 'data', 'analyst', 'it', 'technology', 'tech',
+        'system', 'network', 'database', 'engineer'
+    ],
+    'Human Resources': [
+        'hr', 'human resources', 'recruiter', 'talent', 'payroll', 'benefits'
+    ],
+    'Finance': [
+        'finance', 'financial', 'accounting', 'accountant', 'controller', 'billing', 'accounts'
+    ],
+    'Administration': [
+        'admin', 'administrative', 'coordinator', 'director', 'manager', 'supervisor',
+        'executive', 'assistant', 'specialist', 'operations'
+    ],
+    'Customer Service': [
+        'customer service', 'support', 'representative', 'receptionist', 'front desk'
+    ],
+    'Legal': ['legal', 'attorney', 'compliance', 'contracts'],
+    'Marketing': ['marketing', 'communications', 'brand', 'media', 'outreach'],
+}
+
+
+def _map_job_to_function(cursor, job_category: str, job_title: str = '') -> Optional[int]:
+    """Map job category (or title fallback) to function ID"""
+    search_text = (job_category or job_title or '').lower()
+    if not search_text:
+        return None
+
+    for function_name, keywords in _FUNCTION_KEYWORDS.items():
+        for keyword in keywords:
+            if keyword in search_text:
+                cursor.execute("SELECT id FROM functions WHERE name = %s", (function_name,))
+                result = cursor.fetchone()
+                if result:
+                    logger.info(f"  Mapped '{job_category or job_title}' to function: {function_name}")
+                    return result['id']
+
+    cursor.execute("SELECT id FROM functions WHERE name = %s", ('Other',))
+    result = cursor.fetchone()
+    if result:
+        logger.info(f"  Mapped '{job_category or job_title}' to function: Other")
+        return result['id']
+    return None
+
+
+def _map_job_type(cursor, schedule: str) -> Optional[int]:
+    """Map UltiPro schedule string to job_type_id via normalize_job_type"""
+    canonical = normalize_job_type(schedule)
+    if not canonical:
         logger.warning(f"  Could not map '{schedule}' to any job type")
         return None
-    
-    def _map_job_function(self, job_category: str) -> int:
-        """Map job category to function, default to 'Other' (ID 32)"""
-        if not job_category:
-            return 32
-            
-        job_category_lower = job_category.lower()
-        
-        with self.conn.cursor() as cursor:
-            # Try exact match first
-            cursor.execute("SELECT id FROM Functions WHERE LOWER(name) LIKE %s", (f"%{job_category_lower}%",))
+    cursor.execute("SELECT id FROM jobtype WHERE name = %s", (canonical,))
+    result = cursor.fetchone()
+    if result:
+        logger.info(f"  Mapped '{schedule}' to job type: {canonical}")
+        return result['id']
+    logger.warning(f"  Job type '{canonical}' not found in database")
+    return None
+
+
+def _map_office_location(cursor, location_type: str) -> Optional[int]:
+    """Map UltiPro location type string to office_location_id"""
+    if not location_type:
+        return None
+    location_lower = location_type.lower().replace('-', ' ')
+
+    location_mappings = {
+        'remote': ['remote', 'work from home', 'wfh'],
+        'hybrid': ['hybrid', 'flexible'],
+        'in office': ['onsite', 'on site', 'in office', 'office'],
+    }
+
+    for canonical, variations in location_mappings.items():
+        if any(var in location_lower for var in variations):
+            cursor.execute("SELECT id FROM officelocations WHERE LOWER(name) = %s", (canonical,))
             result = cursor.fetchone()
             if result:
-                logger.info(f"  Mapped '{job_category}' to function ID: {result['id']}")
                 return result['id']
-            
-            # Try keyword-based mapping
-            function_keywords = {
-                'Information Technology': ['technology', 'it', 'software', 'tech', 'data', 'systems'],
-                'Engineering': ['engineering', 'engineer'],
-                'Finance': ['finance', 'financial', 'accounting'],
-                'Human Resources': ['hr', 'human resources', 'people'],
-                'Sales': ['sales', 'business development'],
-                'Marketing': ['marketing', 'communications'],
-                'Operations': ['operations', 'logistics'],
-                'Administration': ['admin', 'administrative'],
-                'Customer Service': ['customer', 'service', 'support'],
-                'Manufacturing': ['manufacturing', 'production'],
-                'Quality': ['quality', 'qa', 'qc'],
-                'Security': ['security', 'safety'],
-                'Legal': ['legal', 'compliance']
-            }
-            
-            for function_name, keywords in function_keywords.items():
-                if any(keyword in job_category_lower for keyword in keywords):
-                    cursor.execute("SELECT id FROM Functions WHERE name = %s", (function_name,))
-                    result = cursor.fetchone()
-                    if result:
-                        logger.info(f"  Mapped '{job_category}' to function ID: {result['id']} via '{function_name}'")
-                        return result['id']
-        
-        logger.info(f"  Mapped '{job_category}' to default function: Other (ID: 32)")
-        return 32
-    
-    def _map_office_location(self, location_type: str) -> int:
-        """Map location type to office_location_id, default to 1 (In Office)"""
-        if not location_type:
-            return 1
-            
-        location_type_lower = location_type.lower().replace('-', ' ')
-        
-        with self.conn.cursor() as cursor:
-            # Try exact match first
-            cursor.execute("SELECT id FROM OfficeLocations WHERE LOWER(REPLACE(name, '-', ' ')) LIKE %s", (f"%{location_type_lower}%",))
-            result = cursor.fetchone()
-            if result:
-                logger.info(f"  Mapped '{location_type}' to office location ID: {result['id']}")
-                return result['id']
-            
-            # Try common variations
-            location_mappings = {
-                'remote': ['remote', 'work from home', 'wfh'],
-                'hybrid': ['hybrid', 'flexible'],
-                'onsite': ['onsite', 'on-site', 'in office', 'office']
-            }
-            
-            for location_key, variations in location_mappings.items():
-                if any(var in location_type_lower for var in variations):
-                    cursor.execute("SELECT id FROM OfficeLocations WHERE LOWER(name) LIKE %s", (f"%{location_key}%",))
-                    result = cursor.fetchone()
-                    if result:
-                        logger.info(f"  Mapped '{location_type}' to office location ID: {result['id']} via '{location_key}'")
-                        return result['id']
-        
-        logger.info(f"  Mapped '{location_type}' to default office location: In Office (ID: 1)")
-        return 1
-    
-    def update_company_scrape_completed(self, company_id: int):
-        """Update last_full_scrape_completed timestamp for company"""
-        with self.conn.cursor() as cursor:
-            cursor.execute("""
-                UPDATE Company 
-                SET last_full_scrape_completed = CURRENT_TIMESTAMP 
-                WHERE id = %s
-            """, (company_id,))
-            logger.info(f"Updated last_full_scrape_completed for company {company_id}")
-    
-    def mark_stale_jobs_closed(self, company_id: int):
-        """Mark jobs as closed if not updated during this scrape cycle"""
-        with self.conn.cursor() as cursor:
-            # Get the last full scrape completion date
-            cursor.execute("""
-                SELECT last_full_scrape_completed 
-                FROM Company 
-                WHERE id = %s
-            """, (company_id,))
-            
-            company_data = cursor.fetchone()
-            if not company_data or not company_data['last_full_scrape_completed']:
-                logger.warning(f"No last_full_scrape_completed date found for company {company_id}")
-                return
-            
-            last_scrape_date = company_data['last_full_scrape_completed']
-            
-            # Close jobs that weren't updated in this scrape cycle
-            cursor.execute("""
-                UPDATE JobListings SET 
-                    job_status_id = 6,
-                    date_closed = CURRENT_DATE
-                WHERE company_id = %s 
-                AND job_status_id != 6
-                AND updated_at < %s
-            """, (company_id, last_scrape_date))
-            
-            closed_count = cursor.rowcount
-            if closed_count > 0:
-                logger.info(f"Marked {closed_count} stale jobs as closed (status_id = 6)")
-    
-    def log_scraping_activity(self, job_board: str, stats: Dict):
-        """Log scraping results"""
-        with self.conn.cursor() as cursor:
-            cursor.execute("""
-                INSERT INTO ScrapingLog (
-                    job_board, jobs_found, jobs_added, jobs_updated, 
-                    jobs_skipped, errors, status
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """, (
-                job_board,
-                stats.get('found', 0),
-                stats.get('added', 0),
-                stats.get('updated', 0),
-                stats.get('skipped', 0),
-                str(stats.get('errors', [])),
-                'completed'
-            ))
+
+    cursor.execute("SELECT id FROM officelocations WHERE LOWER(name) = %s", (location_lower,))
+    result = cursor.fetchone()
+    return result['id'] if result else None
+
+
+def _update_company_scrape_completed(cursor, company_id: int):
+    """Update last_full_scrape_completed timestamp for company"""
+    cursor.execute("""
+        UPDATE company
+        SET last_full_scrape_completed = CURRENT_TIMESTAMP
+        WHERE id = %s
+    """, (company_id,))
+    logger.info(f"Updated last_full_scrape_completed for company {company_id}")
+
+
+def _log_scraping_activity(cursor, job_board: str, company_id: int, stats: Dict):
+    """Log scraping results to scrapinglog table"""
+    cursor.execute("""
+        INSERT INTO scrapinglog (
+            job_board, company_id, jobs_found, jobs_added, jobs_updated,
+            jobs_skipped, errors, status
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+    """, (
+        job_board,
+        company_id,
+        stats.get('found', 0),
+        stats.get('added', 0),
+        stats.get('updated', 0),
+        stats.get('skipped', 0),
+        str(stats.get('errors', [])),
+        'completed'
+    ))
+
 
 class SeleniumJobScraper:
-    """Handles JavaScript-heavy job pages using Selenium"""
-    
+    """Handles UltiPro job pages using Selenium + data-automation selectors"""
+
+    # recruiting2 subdomain is used for relative hrefs on this employer's board
+    DETAIL_BASE_URL = "https://recruiting2.ultipro.com"
+
     def __init__(self, headless=True):
         self.driver = None
         self.headless = headless
         self.setup_driver()
-    
+
     def setup_driver(self):
-        """Initialize Chrome WebDriver with optimized options"""
+        """Initialize Chrome WebDriver"""
         try:
-            chrome_options = Options()
-            if self.headless:
-                chrome_options.add_argument('--headless=new')
-            
-            # Performance optimizations
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--disable-gpu-sandbox')
-            chrome_options.add_argument('--disable-software-rasterizer')
-            chrome_options.add_argument('--disable-webgl')
-            chrome_options.add_argument('--disable-webgl2')
-            chrome_options.add_argument('--disable-3d-apis')
-            chrome_options.add_argument('--enable-unsafe-swiftshader')
-            chrome_options.add_argument('--disable-images')  # Don't load images
-            chrome_options.add_argument('--disable-javascript-harmony-shipping')
-            chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--disable-plugins')
-            chrome_options.add_argument('--disable-plugins-discovery')
-            chrome_options.add_argument('--disable-preconnect')
-            chrome_options.add_argument('--disable-sync')
-            chrome_options.add_argument('--disable-background-timer-throttling')
-            chrome_options.add_argument('--disable-renderer-backgrounding')
-            chrome_options.add_argument('--disable-backgrounding-occluded-windows')
-            chrome_options.add_argument('--disable-client-side-phishing-detection')
-            chrome_options.add_argument('--disable-default-apps')
-            chrome_options.add_argument('--disable-hang-monitor')
-            chrome_options.add_argument('--disable-popup-blocking')
-            chrome_options.add_argument('--disable-prompt-on-repost')
-            chrome_options.add_argument('--disable-web-security')
-            chrome_options.add_argument('--disable-features=TranslateUI,VizDisplayCompositor')
-            chrome_options.add_argument('--window-size=1280,720')  # Smaller window
-            
-            # Disable logging and error messages
-            chrome_options.add_argument('--log-level=3')
-            chrome_options.add_argument('--silent')
-            chrome_options.add_argument('--disable-logging')
-            chrome_options.add_argument('--disable-gpu-logging')
-            chrome_options.add_argument('--disable-extensions-http-throttling')
-            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
-            chrome_options.add_experimental_option('useAutomationExtension', False)
-            
-            # Set page load strategy to eager (don't wait for all resources)
-            chrome_options.page_load_strategy = 'eager'
-            
-            chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
-            
-            # Try to find chromedriver
-            try:
-                self.driver = webdriver.Chrome(options=chrome_options)
-            except:
-                self.driver = webdriver.Chrome('./chromedriver.exe', options=chrome_options)
-            
-            # Reduce implicit wait time
-            self.driver.implicitly_wait(5)
-            
-            # Set timeouts
-            self.driver.set_page_load_timeout(15)  # Shorter timeout
-            self.driver.set_script_timeout(10)
-            
-            # Execute script to remove automation detection
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
-            logger.info("Optimized Selenium WebDriver initialized")
-            
+            chrome_options = SeleniumConfig.get_chrome_options(self.headless)
+            self.driver = webdriver.Chrome(
+                service=Service(ChromeDriverManager().install()),
+                options=chrome_options
+            )
+            SeleniumConfig.setup_driver_timeouts(self.driver)
+            logger.info("Chrome WebDriver initialized")
         except Exception as e:
             logger.error(f"Failed to initialize WebDriver: {e}")
             raise
-    
-    def get_job_content(self, job_url: str, timeout=12) -> str:
-        """Load job page and wait for content to render - optimized for speed"""
-        try:
-            logger.info(f"  Loading job page with Selenium...")
-            self.driver.get(job_url)
-            
-            # Shorter, more targeted waits
-            wait = WebDriverWait(self.driver, timeout)
-            
-            # Wait for basic page structure
-            try:
-                wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-            except TimeoutException:
-                logger.warning(f"  Body tag not found within timeout")
-                return ""
-            
-            # Give minimal time for dynamic content
-            time.sleep(1.5)
-            
-            # Get page source
-            page_source = self.driver.page_source
-            logger.info(f"  Retrieved page source: {len(page_source)} characters")
-            return page_source
-                
-        except TimeoutException:
-            logger.warning(f"  Timeout waiting for page to load")
-            return self.driver.page_source if self.driver else ""
-            
-        except Exception as e:
-            logger.error(f"  Error loading job page: {e}")
-            return ""
-    
+
     def get_job_listings(self, job_board_url: str) -> List[Dict]:
-        """Load job board and extract all job listings"""
+        """Load job board and extract all job listings using data-automation selectors"""
         try:
             logger.info(f"Loading job board: {job_board_url}")
             self.driver.get(job_board_url)
-            
-            # Wait for job listings to load
+
             wait = WebDriverWait(self.driver, 20)
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, '[data-automation="opportunity"]')))
-            
-            # Give additional time for all content to load
+            wait.until(EC.presence_of_element_located(
+                (By.CSS_SELECTOR, '[data-automation="opportunity"]')
+            ))
             time.sleep(3)
-            
-            # Find all job opportunity divs
-            job_elements = self.driver.find_elements(By.CSS_SELECTOR, '[data-automation="opportunity"]')
+
+            job_elements = self.driver.find_elements(
+                By.CSS_SELECTOR, '[data-automation="opportunity"]'
+            )
             logger.info(f"Found {len(job_elements)} job opportunities")
-            
+
             jobs = []
             for i, job_element in enumerate(job_elements):
                 try:
-                    job_data = self.extract_job_metadata(job_element, i + 1)
+                    job_data = self._extract_job_metadata(job_element, i + 1)
                     if job_data:
                         jobs.append(job_data)
                 except Exception as e:
                     logger.error(f"Error extracting job {i + 1}: {e}")
-            
-            logger.info(f"Successfully extracted {len(jobs)} job listings")
+
+            logger.info(f"Extracted {len(jobs)} job listings")
             return jobs
-            
+
         except TimeoutException:
             logger.error("Timeout waiting for job listings to load")
             return []
         except Exception as e:
             logger.error(f"Error loading job board: {e}")
             return []
-    
-    def extract_job_metadata(self, job_element, job_number: int) -> Dict:
-        """Extract job metadata from a single job element"""
+
+    def _extract_job_metadata(self, job_element, job_number: int) -> Optional[Dict]:
+        """Extract job metadata from a single UltiPro job element"""
         job_data = {}
-        
+
         try:
-            # Job Title and URL
-            title_link = job_element.find_element(By.CSS_SELECTOR, '[data-automation="job-title"]')
+            title_link = job_element.find_element(
+                By.CSS_SELECTOR, '[data-automation="job-title"]'
+            )
             job_data['job_title'] = title_link.text.strip()
             href = title_link.get_attribute('href')
-            logger.info(f"  Raw href value: {href}")
-            # Handle both absolute and relative URLs
             if href.startswith('http'):
                 job_data['posting_url'] = href
             elif href.startswith('/'):
-                job_data['posting_url'] = f"https://recruiting2.ultipro.com{href}"
+                job_data['posting_url'] = f"{self.DETAIL_BASE_URL}{href}"
             else:
-                job_data['posting_url'] = f"https://recruiting2.ultipro.com/{href}"
-                
-            # Posted Date
+                job_data['posting_url'] = f"{self.DETAIL_BASE_URL}/{href}"
+
             try:
-                posted_date_element = job_element.find_element(By.CSS_SELECTOR, '[data-automation="opportunity-posted-date"]')
-                job_data['posted_date_raw'] = posted_date_element.text.strip()
-                job_data['date_posted'] = normalize_date_string(job_data['posted_date_raw'])
+                date_elem = job_element.find_element(
+                    By.CSS_SELECTOR, '[data-automation="opportunity-posted-date"]'
+                )
+                job_data['date_posted'] = normalize_date_string(date_elem.text.strip())
             except NoSuchElementException:
-                job_data['posted_date_raw'] = None
                 job_data['date_posted'] = None
-            
-            # Requisition Number (posting_id)
+
             try:
-                req_number_element = job_element.find_element(By.XPATH, './/strong[contains(text(), "Requisition Number")]/following-sibling::span')
-                job_data['posting_id'] = req_number_element.text.strip()
+                req_elem = job_element.find_element(
+                    By.XPATH,
+                    './/strong[contains(text(), "Requisition Number")]/following-sibling::span'
+                )
+                job_data['posting_id'] = req_elem.text.strip()
             except NoSuchElementException:
                 job_data['posting_id'] = None
-            
-            # Schedule/Hours
+
             try:
-                schedule_element = job_element.find_element(By.CSS_SELECTOR, '[data-automation="job-hours"]')
-                job_data['schedule'] = schedule_element.text.strip()
+                schedule_elem = job_element.find_element(
+                    By.CSS_SELECTOR, '[data-automation="job-hours"]'
+                )
+                job_data['schedule'] = schedule_elem.text.strip()
             except NoSuchElementException:
                 job_data['schedule'] = None
-            
-            # Job Category
+
             try:
-                category_element = job_element.find_element(By.CSS_SELECTOR, '[data-automation="job-category"]')
-                job_data['job_category'] = category_element.text.strip()
+                category_elem = job_element.find_element(
+                    By.CSS_SELECTOR, '[data-automation="job-category"]'
+                )
+                job_data['job_category'] = category_elem.text.strip()
             except NoSuchElementException:
                 job_data['job_category'] = None
-            
-            # Job Location Type (Remote/Hybrid/Onsite)
+
             try:
-                location_type_element = job_element.find_element(By.CSS_SELECTOR, '[data-automation="job-location-type"]')
-                job_data['location_type'] = location_type_element.text.strip()
+                loc_type_elem = job_element.find_element(
+                    By.CSS_SELECTOR, '[data-automation="job-location-type"]'
+                )
+                job_data['location_type'] = loc_type_elem.text.strip()
             except NoSuchElementException:
                 job_data['location_type'] = None
-            
-            # Physical Location
+
             try:
-                location_element = job_element.find_element(By.CSS_SELECTOR, '[data-automation="physical-location"]')
-                job_data['physical_location'] = location_element.text.strip()
+                phys_loc_elem = job_element.find_element(
+                    By.CSS_SELECTOR, '[data-automation="physical-location"]'
+                )
+                job_data['physical_location'] = phys_loc_elem.text.strip()
             except NoSuchElementException:
                 job_data['physical_location'] = None
-            
-            logger.info(f"Job {job_number}: {job_data['job_title']} - {job_data['posted_date_raw']}")
+
+            logger.info(
+                f"Job {job_number}: {job_data['job_title']} | "
+                f"{job_data.get('physical_location', 'no location')}"
+            )
             return job_data
-            
+
         except Exception as e:
             logger.error(f"Error extracting metadata for job {job_number}: {e}")
             return None
-   
+
+    def get_page_html(self, url: str) -> str:
+        """Load a page and return raw HTML"""
+        try:
+            self.driver.get(url)
+            wait = WebDriverWait(self.driver, 12)
+            wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
+            time.sleep(1.5)
+            return self.driver.page_source
+        except TimeoutException:
+            return self.driver.page_source if self.driver else ""
+        except Exception as e:
+            logger.warning(f"  Error loading page: {e}")
+            return ""
+
     def extract_job_description(self, html_content: str) -> str:
-        """Extract job description from HTML content"""
+        """Extract plain-text job description from detail page HTML"""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Remove scripts, styles, navigation
+
             for tag in soup.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
                 tag.decompose()
-            
-            # Get body content
+
             body = soup.find('body')
-            if body:
-                # Remove common non-content elements
-                for tag in body.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside']):
-                    tag.decompose()
-                
-                body_text = body.get_text(separator=' ', strip=True)
-                if len(body_text) > 100:
-                    logger.info(f"  Extracted job description: {len(body_text)} characters")
-                    return body_text
-            
-            logger.warning(f"  No meaningful job description found")
-            return html_content
-            
+            if not body:
+                return ""
+
+            for br in body.find_all('br'):
+                br.replace_with('\n')
+
+            description = body.get_text(separator='\n', strip=True)
+
+            copyright_idx = description.lower().find('copyright')
+            if copyright_idx != -1:
+                description = description[:copyright_idx]
+
+            description = re.sub(r'\n{3,}', '\n\n', description).strip()
+
+            logger.info(f"  Extracted description: {len(description)} chars")
+            return description
+
         except Exception as e:
-            logger.warning(f"Error extracting job description: {e}")
-            return html_content
-    
+            logger.warning(f"  Error extracting description: {e}")
+            return ""
+
     def extract_location_description(self, html_content: str) -> Optional[str]:
-        """Extract location description from job detail page"""
+        """Extract office location description from job detail page"""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Look for the location-description span
             location_span = soup.find('span', {'data-automation': 'location-description'})
             if location_span:
                 location_text = location_span.get_text(strip=True)
                 logger.info(f"  Found location description: '{location_text}'")
                 return location_text
-            
-            logger.warning("  No location-description span found")
+            logger.warning("  No location-description span found on detail page")
             return None
-            
         except Exception as e:
-            logger.warning(f"Error extracting location description: {e}")
+            logger.warning(f"  Error extracting location description: {e}")
             return None
-    
+
     def cleanup(self):
         """Close the WebDriver"""
         if self.driver:
             try:
                 self.driver.quit()
                 logger.info("WebDriver closed")
-            except:
+            except Exception:
                 pass
 
-class familycsUltiProScraper:
-    """familycs UltiPro job scraper"""
-    
-    def __init__(self, db_manager: DatabaseManager):
-        self.db = db_manager
+
+class FamilyCSUltiProScraper:
+    """Family & Children's Services UltiPro job scraper"""
+
+    COMPANY_NAME = "Family & Children's Services"
+
+    def __init__(self, conn):
+        self.conn = conn
         self.selenium_scraper = SeleniumJobScraper(headless=True)
-        
-        self.company_config = {
-            'id': 714,  # familycs company ID
-            'job_board_url': 'https://recruiting.ultipro.com/FAM1003FAMCS/JobBoard/90a78436-57b3-405c-bf40-d3259c9341b2/?q=&o=postedDateDesc'
-        }
-    
-    def create_scraping_hash(self, job_data: Dict) -> str:
-        """Create hash for duplicate detection"""
-        content = f"{job_data['job_title']}{job_data['posting_url']}{job_data.get('job_description', '')}"
-        return hashlib.md5(content.encode('utf-8')).hexdigest()
-    
+
     def scrape_jobs(self) -> Dict:
         """Main scraping method"""
-        stats = {
-            'found': 0,
-            'added': 0,
-            'updated': 0,
-            'skipped': 0,
-            'errors': []
-        }
-        
+        stats = {'found': 0, 'added': 0, 'updated': 0, 'skipped': 0, 'errors': []}
+
         try:
-            company_id = self.company_config['id']
-            
-            # Step 1: Get job listings from job board
-            logger.info("Step 1: Getting job listings from familycs job board...")
-            job_listings = self.selenium_scraper.get_job_listings(self.company_config['job_board_url'])
-            if not job_listings:
-                raise Exception("No jobs retrieved from job board")
-            
-            stats['found'] = len(job_listings)
-            logger.info(f"? Found {len(job_listings)} jobs")
-            
-            # Step 2: Process each job
-            for i, job_metadata in enumerate(job_listings):
-                try:
-                    logger.info(f"Processing job {i+1}/{len(job_listings)}: {job_metadata.get('job_title', 'Unknown')}")
-                    
-                    # Check if job already exists
-                    existing_job_id = self.db.check_existing_job(job_metadata['posting_url'])
-                    if existing_job_id:
-                        stats['updated'] += 1
-                        continue
-                    
-                    # Scrape full job description for new jobs only
-                    job_html = self.selenium_scraper.get_job_content(job_metadata['posting_url'])
-                    if not job_html or len(job_html.strip()) < 100:
-                        logger.warning(f"  Failed to get meaningful job content")
-                        stats['skipped'] += 1
-                        continue
-                    
-                    job_description = self.selenium_scraper.extract_job_description(job_html)
-                    
-                    # Extract location description and get company site ID
-                    location_description = self.selenium_scraper.extract_location_description(job_html)
-                    if location_description:
-                        company_site_id = self.db.get_or_create_company_site(company_id, location_description)
-                    else:
-                        company_site_id = 346  # fallback to default if no location found
-                        logger.warning(f"  No location description found, using default company_site_id: {company_site_id}")
-                    
-                    # Prepare complete job data
-                    job_data = {
-                        'job_title': job_metadata['job_title'],
-                        'posting_url': job_metadata['posting_url'],
-                        'posting_id': job_metadata['posting_id'],
-                        'job_description': job_description,
-                        'date_posted': job_metadata['date_posted'],
-                        'schedule': job_metadata['schedule'],
-                        'job_category': job_metadata['job_category'],
-                        'location_type': job_metadata['location_type'],
-                        'company_site_id': company_site_id,  # Now using dynamic value
-                        'minimum_salary': None,  # UltiPro might not have this
-                        'maximum_salary': None,  # UltiPro might not have this
-                        'pay_frequency': None,   # UltiPro might not have this
-                        'scraping_hash': self.create_scraping_hash({
+            with self.conn.cursor() as cursor:
+                # Step 1: Resolve company — must already exist in DB (jobboard URL comes from there)
+                logger.info("Step 1: Resolving company...")
+                company_config = get_company_config_by_name(cursor, self.COMPANY_NAME)
+                if not company_config:
+                    raise ValueError(f"Company '{self.COMPANY_NAME}' not found in database")
+                company_id = company_config['id']
+                job_board_url = company_config['jobboard']
+                logger.info(f"  Company ID: {company_id}, Board: {job_board_url}")
+
+                # Step 2: Fetch all job listings from UltiPro job board
+                logger.info("Step 2: Fetching job listings...")
+                all_jobs = self.selenium_scraper.get_job_listings(job_board_url)
+                if not all_jobs:
+                    raise Exception("No jobs retrieved from job board")
+
+                # Step 3: Filter to served cities
+                logger.info("Step 3: Filtering for served cities...")
+                local_jobs = [
+                    job for job in all_jobs
+                    if find_served_city(job.get('physical_location', ''))
+                ]
+                stats['found'] = len(local_jobs)
+                logger.info(
+                    f"  {len(local_jobs)} of {len(all_jobs)} jobs are in served cities"
+                )
+
+                if not local_jobs:
+                    logger.warning("No jobs found in served cities")
+                    return stats
+
+                # Step 4: Process each job
+                for i, job_metadata in enumerate(local_jobs):
+                    try:
+                        title = job_metadata.get('job_title', 'Unknown')
+                        logger.info(f"Processing job {i+1}/{len(local_jobs)}: {title}")
+
+                        existing_job_id = check_existing_job_by_url(
+                            cursor, job_metadata['posting_url']
+                        )
+                        if existing_job_id:
+                            stats['updated'] += 1
+                            continue
+
+                        html = self.selenium_scraper.get_page_html(job_metadata['posting_url'])
+                        if not html or len(html.strip()) < 100:
+                            logger.warning("  Failed to get job page content, skipping")
+                            stats['skipped'] += 1
+                            continue
+
+                        description = self.selenium_scraper.extract_job_description(html)
+                        if not description or len(description.strip()) < 50:
+                            logger.warning("  Insufficient description, skipping")
+                            stats['skipped'] += 1
+                            continue
+
+                        # Company site from the detail page's location-description element
+                        location_description = self.selenium_scraper.extract_location_description(html)
+                        company_site_id = None
+                        if location_description:
+                            company_site_id = get_or_create_company_site(
+                                cursor, company_id, location_description
+                            )
+
+                        city_name = find_served_city(job_metadata.get('physical_location', ''))
+                        city_id = get_city_id(cursor, city_name) if city_name else None
+
+                        job_data = {
                             'job_title': job_metadata['job_title'],
                             'posting_url': job_metadata['posting_url'],
-                            'job_description': job_description
-                        })
-                    }
-                    
-                    # Store job in database
-                    job_id = self.db.store_job_listing(job_data, company_id)
-                    logger.info(f"  ? Stored job with ID: {job_id}")
-                    stats['added'] += 1
-                    
-                    # Be respectful with timing
-                    time.sleep(1.0)
-                    
-                except Exception as e:
-                    error_msg = f"Error processing job {job_metadata.get('job_title', 'Unknown')}: {e}"
-                    logger.error(error_msg)
-                    stats['errors'].append(error_msg)
-                    stats['skipped'] += 1
-            
-            # Step 3: Mark stale jobs as closed
-            logger.info("Step 3: Marking stale jobs as closed...")
-            self.db.mark_stale_jobs_closed(company_id)
-            
-            # Step 4: Update company scrape completion
-            logger.info("Step 4: Updating company scrape completion...")
-            self.db.update_company_scrape_completed(company_id)
-            
-            # Step 5: Log results
-            logger.info("Step 5: Logging results...")
-            self.db.log_scraping_activity('familycs UltiPro', stats)
-            
+                            'posting_id': job_metadata.get('posting_id'),
+                            'job_description': description,
+                            'date_posted': job_metadata.get('date_posted'),
+                            'source_job_board': "Family & Children's Services UltiPro",
+                            'company_site_id': company_site_id,
+                            'scraping_hash': hashlib.md5(
+                                f"{job_metadata['job_title']}{job_metadata['posting_url']}{description}".encode()
+                            ).hexdigest(),
+                            'function': _map_job_to_function(
+                                cursor,
+                                job_metadata.get('job_category', ''),
+                                job_metadata['job_title']
+                            ),
+                            'job_type_id': _map_job_type(cursor, job_metadata.get('schedule', '')),
+                            'office_location_id': _map_office_location(
+                                cursor, job_metadata.get('location_type', '')
+                            ),
+                            'city_id': city_id,
+                        }
+
+                        job_id = store_job_listing(cursor, job_data, company_id)
+                        logger.info(f"  Stored job with ID: {job_id}")
+                        stats['added'] += 1
+                        time.sleep(1.0)
+
+                    except Exception as e:
+                        error_msg = f"Error processing {job_metadata.get('job_title', 'Unknown')}: {e}"
+                        logger.error(error_msg)
+                        stats['errors'].append(error_msg)
+                        stats['skipped'] += 1
+
+                # Step 5: Mark stale jobs as closed
+                logger.info("Step 5: Marking stale jobs as closed...")
+                mark_stale_jobs_closed(cursor, company_id)
+
+                # Step 6: Update company scrape completion
+                logger.info("Step 6: Updating company scrape completion...")
+                _update_company_scrape_completed(cursor, company_id)
+
+                # Step 7: Log results
+                logger.info("Step 7: Logging results...")
+                _log_scraping_activity(
+                    cursor, "Family & Children's Services UltiPro", company_id, stats
+                )
+
         except Exception as e:
             error_msg = f"Scraping failed: {e}"
             logger.error(error_msg)
             stats['errors'].append(error_msg)
-        
+
         return stats
-    
+
     def cleanup(self):
         """Clean up resources"""
         if self.selenium_scraper:
             self.selenium_scraper.cleanup()
 
+
 def main():
     """Main execution function"""
-    # Get password from environment variable
-    db_password = os.getenv('POSTGRES_PASSWORD')
-    if not db_password:
-        logger.error("Please set POSTGRES_PASSWORD environment variable")
-        logger.error("Example: set POSTGRES_PASSWORD=your_password")
-        return 1
-    
-    db_connection = f"postgresql://postgres:{db_password}@localhost:5432/tulsa_jobs"
-    
+    conn = None
     scraper = None
     try:
-        # Initialize components
-        db_manager = DatabaseManager(db_connection)
-        scraper = familycsUltiProScraper(db_manager)
-        
-        # Run scraping
-        logger.info("Starting familycs UltiPro job scraping...")
+        conn = get_database_connection()
+        scraper = FamilyCSUltiProScraper(conn)
+
+        logger.info("Starting Family & Children's Services UltiPro job scraping...")
         results = scraper.scrape_jobs()
-        
-        # Print summary
+
         logger.info("=== SCRAPING SUMMARY ===")
         logger.info(f"Jobs found: {results['found']}")
         logger.info(f"Jobs added: {results['added']}")
         logger.info(f"Jobs updated: {results['updated']}")
         logger.info(f"Jobs skipped: {results['skipped']}")
         logger.info(f"Errors: {len(results['errors'])}")
-        
+
         if results['errors']:
             logger.error("Errors encountered:")
             for error in results['errors']:
                 logger.error(f"  - {error}")
-        
+
     except Exception as e:
         logger.error(f"Script failed: {e}")
         return 1
     finally:
         if scraper:
             scraper.cleanup()
-    
+        close_connection(conn)
+
     return 0
+
 
 if __name__ == "__main__":
     exit(main())
