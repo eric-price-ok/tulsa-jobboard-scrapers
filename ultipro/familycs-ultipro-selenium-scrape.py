@@ -281,18 +281,26 @@ class SeleniumJobScraper:
             return None
 
     def get_page_html(self, url: str) -> str:
-        """Load a page and return raw HTML"""
+        """Load a job detail page and return raw HTML.
+
+        Waits for a data-automation element to confirm UltiPro's JS framework
+        has initialized. The eager page-load strategy returns as soon as the DOM
+        is ready, but UltiPro needs its JS to boot before content renders —
+        waiting only for <body> produces the static "unsupported browser" fallback.
+        """
         try:
             self.driver.get(url)
-            wait = WebDriverWait(self.driver, 12)
-            wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-            time.sleep(1.5)
+            wait = WebDriverWait(self.driver, 15)
+            try:
+                wait.until(EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, '[data-automation]')
+                ))
+            except TimeoutException:
+                logger.warning("  data-automation element not found within timeout, using page as-is")
             return self.driver.page_source
-        except TimeoutException:
-            return self.driver.page_source if self.driver else ""
         except Exception as e:
             logger.warning(f"  Error loading page: {e}")
-            return ""
+            return self.driver.page_source if self.driver else ""
 
     def extract_job_description(self, html_content: str) -> str:
         """Extract plain-text job description from detail page HTML"""
@@ -396,8 +404,10 @@ class FamilyCSUltiProScraper:
                     return stats
 
                 # Step 4: Process each job — update timestamps for existing jobs,
-                # scrape detail pages for new ones (capped at MAX_NEW_JOBS per run)
-                new_jobs_scraped = 0
+                # scrape detail pages for new ones (capped at MAX_NEW_JOBS per run).
+                # The cap counts attempts, not successes, so a failed detail page
+                # still counts and the loop always stops after MAX_NEW_JOBS new jobs.
+                new_jobs_attempted = 0
                 for i, job_metadata in enumerate(local_jobs):
                     try:
                         title = job_metadata.get('job_title', 'Unknown')
@@ -410,13 +420,14 @@ class FamilyCSUltiProScraper:
                             stats['updated'] += 1
                             continue
 
-                        if new_jobs_scraped >= self.MAX_NEW_JOBS:
+                        if new_jobs_attempted >= self.MAX_NEW_JOBS:
                             logger.info(
                                 f"Reached new-job limit of {self.MAX_NEW_JOBS}, "
                                 f"stopping detail scraping for this run"
                             )
                             break
 
+                        new_jobs_attempted += 1
                         html = self.selenium_scraper.get_page_html(job_metadata['posting_url'])
                         if not html or len(html.strip()) < 100:
                             logger.warning("  Failed to get job page content, skipping")
@@ -472,7 +483,6 @@ class FamilyCSUltiProScraper:
                         job_id = store_job_listing(cursor, job_data, company_id)
                         logger.info(f"  Stored job with ID: {job_id}")
                         stats['added'] += 1
-                        new_jobs_scraped += 1
                         time.sleep(1.0)
 
                     except Exception as e:
