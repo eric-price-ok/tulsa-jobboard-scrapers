@@ -228,71 +228,47 @@ class SeleniumJobScraper:
             logger.error(f"Error loading job board: {e}")
             return []
 
-    def _extract_job_metadata(self, job_element, job_number: int) -> Optional[Dict]:
-        """Extract job metadata from a single UltiPro job element"""
-        job_data = {}
+    def _first_text(self, element, selector, by=By.CSS_SELECTOR) -> Optional[str]:
+        """Return text of first matching child element, or None without waiting."""
+        results = element.find_elements(by, selector)
+        return results[0].text.strip() if results else None
 
+    def _extract_job_metadata(self, job_element, job_number: int) -> Optional[Dict]:
+        """Extract job metadata from a single UltiPro job element.
+
+        Uses find_elements (plural) for all optional fields so Selenium never
+        waits on the implicit-wait timeout for missing elements.
+        """
         try:
             title_link = job_element.find_element(
                 By.CSS_SELECTOR, '[data-automation="job-title"]'
             )
-            job_data['job_title'] = title_link.text.strip()
+            job_title = title_link.text.strip()
             href = title_link.get_attribute('href')
             if href.startswith('http'):
-                job_data['posting_url'] = href
+                posting_url = href
             elif href.startswith('/'):
-                job_data['posting_url'] = f"{self.DETAIL_BASE_URL}{href}"
+                posting_url = f"{self.DETAIL_BASE_URL}{href}"
             else:
-                job_data['posting_url'] = f"{self.DETAIL_BASE_URL}/{href}"
+                posting_url = f"{self.DETAIL_BASE_URL}/{href}"
 
-            try:
-                date_elem = job_element.find_element(
-                    By.CSS_SELECTOR, '[data-automation="opportunity-posted-date"]'
-                )
-                job_data['date_posted'] = normalize_date_string(date_elem.text.strip())
-            except NoSuchElementException:
-                job_data['date_posted'] = None
+            date_raw = self._first_text(job_element, '[data-automation="opportunity-posted-date"]')
+            req_raw = self._first_text(
+                job_element,
+                './/strong[contains(text(), "Requisition Number")]/following-sibling::span',
+                by=By.XPATH
+            )
 
-            try:
-                req_elem = job_element.find_element(
-                    By.XPATH,
-                    './/strong[contains(text(), "Requisition Number")]/following-sibling::span'
-                )
-                job_data['posting_id'] = req_elem.text.strip()
-            except NoSuchElementException:
-                job_data['posting_id'] = None
-
-            try:
-                schedule_elem = job_element.find_element(
-                    By.CSS_SELECTOR, '[data-automation="job-hours"]'
-                )
-                job_data['schedule'] = schedule_elem.text.strip()
-            except NoSuchElementException:
-                job_data['schedule'] = None
-
-            try:
-                category_elem = job_element.find_element(
-                    By.CSS_SELECTOR, '[data-automation="job-category"]'
-                )
-                job_data['job_category'] = category_elem.text.strip()
-            except NoSuchElementException:
-                job_data['job_category'] = None
-
-            try:
-                loc_type_elem = job_element.find_element(
-                    By.CSS_SELECTOR, '[data-automation="job-location-type"]'
-                )
-                job_data['location_type'] = loc_type_elem.text.strip()
-            except NoSuchElementException:
-                job_data['location_type'] = None
-
-            try:
-                phys_loc_elem = job_element.find_element(
-                    By.CSS_SELECTOR, '[data-automation="physical-location"]'
-                )
-                job_data['physical_location'] = phys_loc_elem.text.strip()
-            except NoSuchElementException:
-                job_data['physical_location'] = None
+            job_data = {
+                'job_title': job_title,
+                'posting_url': posting_url,
+                'date_posted': normalize_date_string(date_raw) if date_raw else None,
+                'posting_id': req_raw,
+                'schedule': self._first_text(job_element, '[data-automation="job-hours"]'),
+                'job_category': self._first_text(job_element, '[data-automation="job-category"]'),
+                'location_type': self._first_text(job_element, '[data-automation="job-location-type"]'),
+                'physical_location': self._first_text(job_element, '[data-automation="physical-location"]'),
+            }
 
             logger.info(
                 f"Job {job_number}: {job_data['job_title']} | "
