@@ -171,8 +171,7 @@ def _log_scraping_activity(cursor, job_board: str, company_id: int, stats: Dict)
 class SeleniumJobScraper:
     """Handles UltiPro job pages using Selenium + data-automation selectors"""
 
-    # recruiting2 subdomain is used for relative hrefs on this employer's board
-    DETAIL_BASE_URL = "https://recruiting2.ultipro.com"
+    DETAIL_BASE_URL = "https://recruiting.ultipro.com"
 
     def __init__(self, headless=True):
         self.driver = None
@@ -378,6 +377,7 @@ class FamilyCSUltiProScraper:
     """Family & Children's Services UltiPro job scraper"""
 
     COMPANY_NAME = "Family & Children's Services"
+    MAX_NEW_JOBS = 5  # cap detail-page scrapes per run; existing jobs still get timestamps updated
 
     def __init__(self, conn):
         self.conn = conn
@@ -419,7 +419,9 @@ class FamilyCSUltiProScraper:
                     logger.warning("No jobs found in served cities")
                     return stats
 
-                # Step 4: Process each job
+                # Step 4: Process each job — update timestamps for existing jobs,
+                # scrape detail pages for new ones (capped at MAX_NEW_JOBS per run)
+                new_jobs_scraped = 0
                 for i, job_metadata in enumerate(local_jobs):
                     try:
                         title = job_metadata.get('job_title', 'Unknown')
@@ -432,6 +434,13 @@ class FamilyCSUltiProScraper:
                             stats['updated'] += 1
                             continue
 
+                        if new_jobs_scraped >= self.MAX_NEW_JOBS:
+                            logger.info(
+                                f"Reached new-job limit of {self.MAX_NEW_JOBS}, "
+                                f"stopping detail scraping for this run"
+                            )
+                            break
+
                         html = self.selenium_scraper.get_page_html(job_metadata['posting_url'])
                         if not html or len(html.strip()) < 100:
                             logger.warning("  Failed to get job page content, skipping")
@@ -441,6 +450,12 @@ class FamilyCSUltiProScraper:
                         description = self.selenium_scraper.extract_job_description(html)
                         if not description or len(description.strip()) < 50:
                             logger.warning("  Insufficient description, skipping")
+                            stats['skipped'] += 1
+                            continue
+
+                        # Detect UltiPro "unsupported browser" or "not found" error pages
+                        if 'unsupported browser' in description.lower():
+                            logger.warning("  Got UltiPro unsupported-browser error page, skipping")
                             stats['skipped'] += 1
                             continue
 
@@ -481,6 +496,7 @@ class FamilyCSUltiProScraper:
                         job_id = store_job_listing(cursor, job_data, company_id)
                         logger.info(f"  Stored job with ID: {job_id}")
                         stats['added'] += 1
+                        new_jobs_scraped += 1
                         time.sleep(1.0)
 
                     except Exception as e:
