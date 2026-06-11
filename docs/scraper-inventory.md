@@ -17,7 +17,7 @@
 | City National Bank | `adp/city-nb-adp-api-selenium.py` | Gen 1 | Unconfirmed |
 | Gateway | `adp/gateway-test.py` | Gen 1 | Unconfirmed |
 | Oklahoma Cancer Specialists | `adp/ok-cancer-spec-adp-api-selenium.py` | Gen 2 | Confirmed |
-| Paragon Films | `adp/paragon-films-adp-api-selenium.py` | Gen 1 | Unconfirmed |
+| Paragon Films | `adp/paragon-films-adp-api-selenium.py` | Gen 2 | Unconfirmed |
 
 ---
 
