@@ -13,7 +13,7 @@
 
 | Company | File | Gen | Status |
 |---------|------|-----|--------|
-| BancFirst | `adp/bancfirst-adp-api-selenium.py` | Gen 1 | Unconfirmed |
+| BancFirst | `adp/bancfirst-adp-api-selenium.py` | Gen 2 | Unconfirmed |
 | City National Bank | `adp/city-nb-adp-api-selenium.py` | Gen 1 | Unconfirmed |
 | Gateway | `adp/gateway-test.py` | Gen 1 | Unconfirmed |
 | Oklahoma Cancer Specialists | `adp/ok-cancer-spec-adp-api-selenium.py` | Gen 2 | Confirmed |
