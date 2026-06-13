@@ -396,7 +396,8 @@ class GreenheckTulsaScraper:
                 'date_closed': None,
                 'minimum_salary': None,
                 'maximum_salary': None,
-                'office_location_id': None
+                'office_location_id': None,
+                'time_type': None
             }
 
             # Extract posting ID (R-number pattern)
@@ -420,19 +421,26 @@ class GreenheckTulsaScraper:
             except Exception as e:
                 logger.warning(f"  Could not extract posting ID: {e}")
 
-            # Extract remote/office type
+            # Extract remote/office type and time type from detail page metadata
             try:
-                remote_type_dt = soup.find('dt', class_='css-y8qsrx', string=re.compile(r'remote\s+type', re.IGNORECASE))
-                if remote_type_dt:
-                    remote_type_dd = remote_type_dt.find_next_sibling('dd', class_='css-129m7dg')
-                    if remote_type_dd:
-                        remote_type_text = remote_type_dd.get_text(strip=True)
-                        office_location_id = self._map_remote_type_to_office_location(cursor, remote_type_text)
+                for dt in soup.find_all('dt'):
+                    label = dt.get_text(strip=True).lower()
+                    dd = dt.find_next_sibling('dd')
+                    if not dd:
+                        continue
+                    value = dd.get_text(strip=True)
+
+                    if re.search(r'remote\s+type', label):
+                        office_location_id = self._map_remote_type_to_office_location(cursor, value)
                         if office_location_id:
                             extracted_fields['office_location_id'] = office_location_id
-                            logger.info(f"  Remote type: {remote_type_text} -> office_location_id: {office_location_id}")
+                        logger.info(f"  Remote type (raw): '{value}' -> office_location_id: {office_location_id}")
+
+                    elif re.search(r'time\s+type', label):
+                        extracted_fields['time_type'] = value
+                        logger.info(f"  Time type (raw): '{value}'")
             except Exception as e:
-                logger.warning(f"  Could not extract remote type: {e}")
+                logger.warning(f"  Could not extract detail page metadata: {e}")
 
             # Strip non-content tags before extracting description
             for tag in soup.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
@@ -549,8 +557,7 @@ class GreenheckTulsaScraper:
                         if not function_id:
                             function_id = _map_job_to_function(cursor, job.get('title', ''))
 
-                        time_type_raw = job.get('timeType', '')
-                        logger.info(f"  timeType (raw): '{time_type_raw}'")
+                        time_type_raw = extracted_fields.get('time_type', '')
 
                         job_data = {
                             'job_title': job.get('title', ''),
