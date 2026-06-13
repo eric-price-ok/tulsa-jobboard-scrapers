@@ -10,7 +10,7 @@ from utils.posting_operations import store_job_listing, check_existing_job_by_ur
 from utils.company_operations import get_or_create_company
 from utils.date_utilities import parse_relative_date
 from utils.selenium_config import SeleniumConfig
-from utils.utility_methods import setup_logging, normalize_job_type
+from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -346,40 +346,18 @@ class GreenheckTulsaScraper:
         return all_jobs
 
     def _map_remote_type_to_office_location(self, cursor, remote_type: str) -> Optional[int]:
-        """Map remote type string to office_location_id from database"""
-        try:
-            cursor.execute(
-                "SELECT id FROM officelocations WHERE LOWER(name) = LOWER(%s)",
-                (remote_type,)
-            )
-            result = cursor.fetchone()
-            if result:
-                return result['id']
-
-            remote_type_lower = remote_type.lower()
-            mappings = {
-                'hybrid': ['hybrid', 'hybrid work'],
-                'remote': ['remote', 'fully remote', 'work from home', 'wfh'],
-                'onsite': ['onsite', 'on-site', 'office', 'in-person', 'on site'],
-                'flexible': ['flexible', 'flex']
-            }
-
-            for key, variations in mappings.items():
-                if any(variation in remote_type_lower for variation in variations):
-                    cursor.execute(
-                        "SELECT id FROM officelocations WHERE LOWER(name) LIKE %s",
-                        (f'%{key}%',)
-                    )
-                    result = cursor.fetchone()
-                    if result:
-                        return result['id']
-
-            logger.warning(f"Could not map remote type '{remote_type}' to any office location")
+        """Map remote type string to office_location_id using normalize_work_location"""
+        canonical = normalize_work_location(remote_type)
+        if not canonical:
+            logger.warning(f"Could not map remote type '{remote_type}' to any work location")
             return None
-
-        except Exception as e:
-            logger.error(f"Error mapping remote type to office location: {e}")
-            return None
+        cursor.execute("SELECT id FROM officelocations WHERE name = %s", (canonical,))
+        result = cursor.fetchone()
+        if result:
+            logger.info(f"  Mapped remote type '{remote_type}' -> '{canonical}' (id: {result['id']})")
+            return result['id']
+        logger.warning(f"Work location '{canonical}' not found in officelocations table")
+        return None
 
     def extract_job_content(self, cursor, html_content: str) -> tuple:
         """Extract job content and parse specific fields from HTML"""

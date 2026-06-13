@@ -43,6 +43,31 @@ def setup_logging(company_name: str, log_level=logging.INFO):
     return logger
 
 
+def normalize_work_location(value: str) -> Optional[str]:
+    """
+    Map various work location strings to the canonical name stored in the officelocations table.
+    Returns the canonical name (e.g. 'On-site') or None if no match found.
+    The caller is responsible for looking up the ID with that name.
+    """
+    if not value:
+        return None
+
+    lower = value.lower()
+
+    mappings = {
+        'On-site':  ['on-site', 'onsite', 'on site', 'office', 'in-person', 'in person', 'in office'],
+        'Remote':   ['remote', 'fully remote', 'work from home', 'wfh', 'work-from-home'],
+        'Hybrid':   ['hybrid'],
+    }
+
+    for canonical, variants in mappings.items():
+        for variant in variants:
+            if variant in lower:
+                return canonical
+
+    return None
+
+
 def normalize_job_type(value: str) -> Optional[str]:
     """
     Map various job type strings to the canonical name stored in the jobtype table.
