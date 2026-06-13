@@ -19,7 +19,7 @@ cd tjs-scrapers
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 ### 3. Install Google Chrome
@@ -86,27 +86,17 @@ This binds PostgreSQL to localhost only on port 5433. Nothing is exposed publicl
 
 ## Running a Scraper
 
-### 1. Activate the virtual environment
+### 1. Source the environment script
+
+`env.sh` in the repo root activates the venv, loads DB credentials, and sets `PYTHONPATH` in one step:
 
 ```bash
-cd /home/deploy/tjs-scrapers
-source venv/bin/activate
+source /home/deploy/tjs-scrapers/env.sh
 ```
 
-### 2. Set environment variables
+> Must be run with `source` (or `. env.sh`) — not executed directly — so the exports apply to your current shell session.
 
-Pull credentials directly from the web app's `.env` file:
-
-```bash
-export $(grep POSTGRES_ /home/deploy/tulsajobspot/.env | xargs)
-export POSTGRES_PORT=5433
-export PYTHONPATH=/home/deploy/tjs-scrapers
-```
-
-> `POSTGRES_PORT=5433` overrides whatever is in the `.env` file to match the host port binding.  
-> `PYTHONPATH` is required so scrapers in subdirectories (e.g. `adp/`, `workday/`) can find the `utils/` package at the repo root.
-
-### 3. Run the scraper
+### 2. Run the scraper
 
 ```bash
 python adp/ok-cancer-spec-adp-api-selenium.py
