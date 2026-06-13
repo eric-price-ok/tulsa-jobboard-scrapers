@@ -22,7 +22,7 @@ from selenium.common.exceptions import TimeoutException
 import time
 import hashlib
 import re
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
 from typing import Dict, List, Optional
 import requests
 
@@ -83,6 +83,31 @@ _FUNCTION_KEYWORDS = {
     'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Security': ['security', 'safety', 'guard', 'protection']
 }
+
+
+def _clean_html_description(element) -> str:
+    """
+    Serialize a BeautifulSoup element keeping only structural formatting tags.
+    Strips all CSS classes, inline styles, and React-generated attributes.
+    Keeps: p, br, strong, b, em, i, ul, ol, li, h1-h6.
+    """
+    KEEP_TAGS = {'p', 'br', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li',
+                 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'}
+
+    def serialize(node):
+        if isinstance(node, NavigableString):
+            return str(node)
+        if isinstance(node, Tag):
+            children = ''.join(serialize(child) for child in node.children)
+            if node.name in KEEP_TAGS:
+                return f'<{node.name}>{children}</{node.name}>'
+            return children
+        return ''
+
+    html = serialize(element)
+    html = re.sub(r'[ \t]+', ' ', html)
+    html = re.sub(r'\n{3,}', '\n\n', html)
+    return html.strip()
 
 
 def _map_category_to_function(cursor, category: str) -> Optional[int]:
@@ -428,7 +453,7 @@ class GreenheckTulsaScraper:
                 content = soup.select_one(selector)
                 if content and len(content.get_text(strip=True)) > 100:
                     logger.info(f"  Extracted content using selector: {selector}")
-                    description = content.get_text(separator='\n', strip=True)
+                    description = _clean_html_description(content)
                     break
 
             if not description:
@@ -436,9 +461,8 @@ class GreenheckTulsaScraper:
                 if body:
                     for tag in body.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside']):
                         tag.decompose()
-                    description = body.get_text(separator='\n', strip=True)
+                    description = _clean_html_description(body)
 
-            description = re.sub(r'\n{3,}', '\n\n', description).strip()
             logger.info(f"  Extracted description: {len(description)} characters")
 
             return description, extracted_fields
@@ -525,6 +549,9 @@ class GreenheckTulsaScraper:
                         if not function_id:
                             function_id = _map_job_to_function(cursor, job.get('title', ''))
 
+                        time_type_raw = job.get('timeType', '')
+                        logger.info(f"  timeType (raw): '{time_type_raw}'")
+
                         job_data = {
                             'job_title': job.get('title', ''),
                             'job_description': job_description,
@@ -534,7 +561,7 @@ class GreenheckTulsaScraper:
                                 job.get('title', ''), job_url, job_description
                             ),
                             'function': function_id,
-                            'job_type_id': _map_job_type(cursor, job.get('timeType', '')),
+                            'job_type_id': _map_job_type(cursor, time_type_raw),
                             'city_id': tulsa_city_id,
                             'posting_id': extracted_fields.get('posting_id'),
                             'date_closed': extracted_fields.get('date_closed'),

@@ -80,8 +80,8 @@ def normalize_job_type(value: str) -> Optional[str]:
     lower = value.lower()
 
     mappings = {
-        'Full-time':        ['full time', 'full-time', 'fulltime'],
-        'Part-time':        ['part time', 'part-time', 'parttime'],
+        'Full-time':        ['full time', 'full-time', 'fulltime', 'full_time'],
+        'Part-time':        ['part time', 'part-time', 'parttime', 'part_time'],
         'Contract':         ['contract', 'contractor'],
         'Contract-to-hire': ['contract to hire', 'contract-to-hire', 'c2h'],
         'Temporary':        ['temporary', 'temp'],
