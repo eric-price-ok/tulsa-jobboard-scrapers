@@ -10,7 +10,7 @@ from utils.posting_operations import store_job_listing, check_existing_job_by_ur
 from utils.company_operations import get_or_create_company
 from utils.date_utilities import parse_relative_date
 from utils.selenium_config import SeleniumConfig
-from utils.utility_methods import setup_logging
+from utils.utility_methods import setup_logging, normalize_job_type
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -157,6 +157,21 @@ def _update_company_scrape_completed(cursor, company_id: int):
     logger.info(f"Updated last_full_scrape_completed for company {company_id}")
 
 
+def _map_job_type(cursor, time_type: str) -> Optional[int]:
+    """Map Workday timeType string to job_type_id"""
+    canonical = normalize_job_type(time_type)
+    if not canonical:
+        logger.warning(f"  Could not map time type '{time_type}' to any job type")
+        return None
+    cursor.execute("SELECT id FROM jobtype WHERE name = %s", (canonical,))
+    result = cursor.fetchone()
+    if result:
+        logger.info(f"  Mapped time type '{time_type}' to job type: {canonical}")
+        return result['id']
+    logger.warning(f"  Job type '{canonical}' not found in database")
+    return None
+
+
 def _log_scraping_activity(cursor, job_board: str, company_id: int, stats: Dict):
     """Log scraping results to scrapinglog table"""
     cursor.execute("""
@@ -243,7 +258,7 @@ class GreenheckTulsaScraper:
         self.selenium_scraper = SeleniumJobScraper(headless=True)
 
         self.company_config = {
-            'name': 'Greenheck Group',
+            'name': 'Greenheck',
             'website': 'https://www.greenheck.com',
             'jobboard': 'https://greenheckgroup.wd5.myworkdayjobs.com/en-US/external?locations=b6fa374461bc10014ce404ef2ca40000&locations=7f2093c061431001a704ca56646c0000',
             'api_endpoint': 'https://greenheckgroup.wd5.myworkdayjobs.com/wday/cxs/greenheckgroup/external/jobs',
@@ -430,25 +445,25 @@ class GreenheckTulsaScraper:
                 'main'
             ]
 
-            main_content = ""
+            description = ""
             for selector in job_selectors:
                 content = soup.select_one(selector)
                 if content and len(content.get_text(strip=True)) > 100:
                     logger.info(f"  Extracted content using selector: {selector}")
-                    main_content = str(content)
+                    description = content.get_text(separator='\n', strip=True)
                     break
 
-            if not main_content:
+            if not description:
                 body = soup.find('body')
                 if body:
                     for tag in body.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside']):
                         tag.decompose()
-                    body_text = body.get_text(strip=True)
-                    main_content = str(body) if len(body_text) > 100 else html_content
-                else:
-                    main_content = html_content
+                    description = body.get_text(separator='\n', strip=True)
 
-            return main_content, extracted_fields
+            description = re.sub(r'\n{3,}', '\n\n', description).strip()
+            logger.info(f"  Extracted description: {len(description)} characters")
+
+            return description, extracted_fields
 
         except Exception as e:
             logger.warning(f"Error extracting job content: {e}")
@@ -487,15 +502,21 @@ class GreenheckTulsaScraper:
                 })
                 logger.info(f"  Resolved company ID: {company_id}")
 
-                # Step 3: Get job listings from API
-                logger.info("Step 3: Getting job listings from API...")
+                # Step 3: Look up Tulsa city ID (all jobs are pre-filtered to Tulsa by the API)
+                cursor.execute("SELECT id FROM cities WHERE city_name = 'Tulsa'")
+                result = cursor.fetchone()
+                tulsa_city_id = result['id'] if result else None
+                logger.info(f"  Tulsa city_id: {tulsa_city_id}")
+
+                # Step 4: Get job listings from API
+                logger.info("Step 4: Getting job listings from API...")
                 all_jobs = self.get_job_listings()
                 if not all_jobs:
                     raise Exception("No jobs retrieved from API")
                 logger.info(f"  Retrieved {len(all_jobs)} jobs from API")
                 stats['found'] = len(all_jobs)
 
-                # Step 4: Process each job
+                # Step 5: Process each job
                 for i, job in enumerate(all_jobs):
                     try:
                         logger.info(f"Processing job {i+1}/{len(all_jobs)}: {job.get('title', 'Unknown')}")
@@ -514,8 +535,8 @@ class GreenheckTulsaScraper:
                             stats['updated'] += 1
                             continue
 
-                        job_html, extracted_fields = self.download_job_details(cursor, job_url)
-                        if not job_html or len(job_html.strip()) < 100:
+                        job_description, extracted_fields = self.download_job_details(cursor, job_url)
+                        if not job_description or len(job_description.strip()) < 100:
                             logger.warning("  Failed to get meaningful job content, skipping")
                             stats['skipped'] += 1
                             continue
@@ -528,13 +549,15 @@ class GreenheckTulsaScraper:
 
                         job_data = {
                             'job_title': job.get('title', ''),
-                            'job_description': job_html,
+                            'job_description': job_description,
                             'posting_url': job_url,
                             'date_posted': parse_relative_date(job.get('postedOn', '')),
                             'scraping_hash': self.create_scraping_hash(
-                                job.get('title', ''), job_url, job_html
+                                job.get('title', ''), job_url, job_description
                             ),
                             'function': function_id,
+                            'job_type_id': _map_job_type(cursor, job.get('timeType', '')),
+                            'city_id': tulsa_city_id,
                             'posting_id': extracted_fields.get('posting_id'),
                             'date_closed': extracted_fields.get('date_closed'),
                             'minimum_salary': extracted_fields.get('minimum_salary'),
@@ -554,16 +577,16 @@ class GreenheckTulsaScraper:
                         stats['errors'].append(error_msg)
                         stats['skipped'] += 1
 
-                # Step 5: Mark stale jobs as closed
-                logger.info("Step 5: Marking stale jobs as closed...")
+                # Step 6: Mark stale jobs as closed
+                logger.info("Step 6: Marking stale jobs as closed...")
                 mark_stale_jobs_closed(cursor, company_id)
 
-                # Step 6: Update company scrape completion
-                logger.info("Step 6: Updating company scrape completion...")
+                # Step 7: Update company scrape completion
+                logger.info("Step 7: Updating company scrape completion...")
                 _update_company_scrape_completed(cursor, company_id)
 
-                # Step 7: Log results
-                logger.info("Step 7: Logging results...")
+                # Step 8: Log results
+                logger.info("Step 8: Logging results...")
                 _log_scraping_activity(cursor, 'Greenheck Tulsa', company_id, stats)
 
         except Exception as e:
