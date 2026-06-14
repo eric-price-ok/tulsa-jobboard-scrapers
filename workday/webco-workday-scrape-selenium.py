@@ -12,7 +12,7 @@ from utils.db_connection import get_database_connection, close_connection
 from utils.posting_operations import store_job_listing, check_existing_job_by_url, mark_stale_jobs_closed
 from utils.company_operations import get_or_create_company
 from utils.date_utilities import parse_relative_date
-from utils.location_utilities import match_location_to_city_id, get_city_id
+from utils.location_utilities import match_location_to_city_id
 from utils.selenium_config import SeleniumConfig
 from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
 
@@ -409,9 +409,7 @@ class WebcoScraper:
                 })
                 logger.info(f"  Resolved company ID: {company_id}")
 
-                # Step 3: Look up fallback city ID (Tulsa) and On-site office location
-                tulsa_city_id = get_city_id(cursor, 'Tulsa')
-                logger.info(f"  Tulsa fallback city_id: {tulsa_city_id}")
+                # Step 3: Look up On-site office location (all Webco jobs are on-site)
 
                 cursor.execute("SELECT id FROM officelocations WHERE name = 'On-site'")
                 result = cursor.fetchone()
@@ -435,7 +433,7 @@ class WebcoScraper:
                             logger.info(f"  Cleaned title: '{raw_title}' -> '{title}'")
                         logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title}")
 
-                        # Resolve city: locationsText first, raw title second, Tulsa fallback
+                        # Resolve city: locationsText first, raw title second, skip if unserved
                         locations_text = job.get('locationsText', '')
                         city_name, city_id = match_location_to_city_id(cursor, locations_text)
                         if city_id:
@@ -445,8 +443,9 @@ class WebcoScraper:
                             if city_id:
                                 logger.info(f"  City from title: {city_name} (id: {city_id})")
                             else:
-                                city_id = tulsa_city_id
-                                logger.info(f"  City: Tulsa (fallback, locationsText='{locations_text}')")
+                                logger.info(f"  Skipping — location not in served area: '{locations_text}'")
+                                stats['skipped'] += 1
+                                continue
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
