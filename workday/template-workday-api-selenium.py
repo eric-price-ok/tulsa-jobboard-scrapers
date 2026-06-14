@@ -19,6 +19,7 @@ from utils.company_operations import get_or_create_company
 from utils.date_utilities import parse_relative_date
 from utils.selenium_config import SeleniumConfig
 from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
+from typing import Tuple
 
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -36,6 +37,32 @@ import requests
 
 # TODO: Replace 'Company Name' with the actual company name
 logger = setup_logging('Company Name')
+
+# Salary range patterns used as a fallback when no salary dt/dd is found.
+# Tuple: (regex_pattern, is_hourly). Hourly rates are annualized at 2080 hrs/yr.
+_SALARY_PATTERNS = [
+    (r'\$?([\d,]+\.?\d*)\s*-\s*\$?([\d,]+\.?\d*)\s*(?:USD|per\s+year|annually|/year)', False),
+    (r'\$?([\d,]+\.?\d*)\s*-\s*\$?([\d,]+\.?\d*)\s*(?:/hour|per\s+hour|hourly)',        True),
+    (r'Salary\s+Range:?\s*\$?([\d,]+\.?\d*)\s*-\s*\$?([\d,]+\.?\d*)',                    False),
+]
+
+
+def _parse_salary_from_text(text: str) -> Tuple[Optional[float], Optional[float]]:
+    """Scan text for a salary range. Returns (min, max) or (None, None)."""
+    for pattern, is_hourly in _SALARY_PATTERNS:
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match:
+            try:
+                min_sal = float(match.group(1).replace(',', ''))
+                max_sal = float(match.group(2).replace(',', ''))
+                if is_hourly:
+                    min_sal *= 2080
+                    max_sal *= 2080
+                return min_sal, max_sal
+            except ValueError:
+                continue
+    return None, None
+
 
 # TODO: Replace with industry-appropriate function keyword mappings.
 # Keys must match names in the functions table. Add/remove categories as needed.
@@ -318,14 +345,15 @@ class WorkdayScraper:
             soup = BeautifulSoup(html_content, 'html.parser')
 
             extracted_fields = {
-                'posting_id': None,
-                'time_type': None,
+                'posting_id':         None,
+                'time_type':          None,
                 'office_location_id': None,
-                'date_posted': None,
-                'date_closed': None,
-                'minimum_salary': None,
-                'maximum_salary': None,
+                'date_posted':        None,
+                'date_closed':        None,
+                'minimum_salary':     None,
+                'maximum_salary':     None,
             }
+            salary_found_in_dd = False
 
             # Extract posting ID (Workday R-number pattern)
             try:
@@ -354,8 +382,25 @@ class WorkdayScraper:
                     elif re.search(r'time\s+type', label):
                         extracted_fields['time_type'] = value
                         logger.info(f"  Time type (raw): '{value}'")
+
+                    elif re.search(r'salary|pay\s+range|compensation', label):
+                        min_sal, max_sal = _parse_salary_from_text(value)
+                        if min_sal:
+                            extracted_fields['minimum_salary'] = min_sal
+                            extracted_fields['maximum_salary'] = max_sal
+                            salary_found_in_dd = True
+                            logger.info(f"  Salary from dt/dd: '{value}'")
+
             except Exception as e:
                 logger.warning(f"  Could not extract detail page metadata: {e}")
+
+            # Salary regex fallback if not found in dt/dd
+            if not salary_found_in_dd:
+                page_text = soup.get_text()
+                min_sal, max_sal = _parse_salary_from_text(page_text)
+                if min_sal:
+                    extracted_fields['minimum_salary'] = min_sal
+                    extracted_fields['maximum_salary'] = max_sal
 
             # Strip non-content tags, then extract clean description
             for tag in soup.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):

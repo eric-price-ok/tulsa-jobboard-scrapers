@@ -74,7 +74,7 @@
 | Aristocrat | `workday/aristocrat-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
 | ChampionX | `workday/championx-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
 | Greenheck | `workday/greenheck-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
-| ONEOK | `workday/oneok-workday-api-scrape-selenium.py` | Gen 1+ | Unconfirmed |
+| ONEOK | `workday/oneok-workday-api-scrape-selenium.py` | Gen 2 | Unconfirmed |
 | Relation Insurance | `workday/relation-workday-api-scrape-selenium.py` | Gen 1+ | Unconfirmed |
 | Tulsa County Sheriff's Office | `workday/tcso-scrape-selenium.py` | Gen 1 | Unconfirmed |
 | Webco Industries | `workday/webco-workday-scrape-selenium.py` | Gen 2 | Unconfirmed |
