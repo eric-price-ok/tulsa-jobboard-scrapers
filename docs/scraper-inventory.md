@@ -78,7 +78,7 @@
 | Relation Insurance | `workday/relation-workday-api-scrape-selenium.py` | Gen 1+ | Unconfirmed |
 | Tulsa County Sheriff's Office | `workday/tcso-scrape-selenium.py` | Gen 1 | Unconfirmed |
 | Webco Industries | `workday/webco-workday-scrape-selenium.py` | Gen 1+ | Unconfirmed |
-| Williams Companies | `workday/williams-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
+| Williams Companies | `workday/williams-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
 
 ---
 
@@ -112,3 +112,4 @@ Reference files for building new scrapers — not run directly.
 | Applitrack (attachment-based descriptions) | `applitrack/template-applitrack-selenium-attachment.py` |
 | Applitrack (inline descriptions) | `applitrack/template-applitrack-selenium-inline.py` |
 | UltiPro | `ultipro/template-ultipro-selenium-scrape.py` |
+| Workday | `workday/template-workday-api-selenium.py` |

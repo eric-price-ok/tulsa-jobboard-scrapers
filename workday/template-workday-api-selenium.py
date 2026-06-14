@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
-williams-workday-api-selenium-scrape.py
-Williams Companies Workday API + Selenium scraper (Gen 2)
+template-workday-api-selenium.py
+TEMPLATE — Workday API + Selenium scraper (Gen 2)
 
-Williams does not expose Tulsa location IDs for API filtering, so this scraper
-uses a two-stage approach:
-  Stage 1: filter API listings by locationsText ('tulsa' or multi-location 'locations')
-  Stage 2: validate the detail page div[data-automation-id="locations"] contains 'Tulsa'
+Copy this file, rename it, and fill in every TODO section.
+Two filtering strategies are supported:
+  A) Location ID filtering (preferred): pass Tulsa location IDs to the API so
+     only Tulsa jobs are returned. Find IDs by inspecting the careers page network
+     requests and looking for the `locations` facet values.
+  B) Two-stage text filter (fallback): fetch all jobs, filter by locationsText
+     containing 'tulsa', then validate on the detail page. Use when location IDs
+     are unknown. See williams-workday-api-selenium-scrape.py for an example.
 """
 
 from utils.db_connection import get_database_connection, close_connection
@@ -30,84 +34,31 @@ from bs4 import BeautifulSoup, NavigableString, Tag
 from typing import Dict, List, Optional
 import requests
 
-logger = setup_logging('Williams')
+# TODO: Replace 'Company Name' with the actual company name
+logger = setup_logging('Company Name')
 
-# Oil & gas midstream function keyword mappings
+# TODO: Replace with industry-appropriate function keyword mappings.
+# Keys must match names in the functions table. Add/remove categories as needed.
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
-        'software', 'developer', 'programmer', 'data',
-        'analyst', 'database', 'system', 'network', 'devops', 'cloud',
-        'application', 'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber'
+        'software', 'developer', 'programmer', 'data', 'analyst', 'database',
+        'system', 'network', 'security', 'devops', 'cloud', 'application',
+        'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber'
     ],
-    'Engineering, Mechanical': [
-        'mechanical', 'mech eng', 'mechanical engineer', 'pipeline', 'compressor',
-        'facilities', 'plant engineer', 'process engineer', 'compression',
-        'gas processing', 'midstream', 'facility engineer', 'rotating equipment',
-        'turbine', 'pump', 'valve'
-    ],
-    'Engineering, Electrical': [
-        'electrical', 'elec eng', 'electrical engineer', 'instrumentation', 'controls',
-        'scada', 'automation', 'control systems', 'plc', 'dcs'
-    ],
-    'Engineering, Civil': [
-        'civil', 'civil engineer', 'structural', 'geotechnical'
-    ],
-    'Engineering, Other': [
-        'chemical engineer', 'petroleum engineer', 'process engineer',
-        'reliability engineer', 'corrosion engineer'
-    ],
-    'Project Management': [
-        'operations', 'ops', 'plant', 'facility', 'gas plant', 'processing',
-        'dispatch', 'pipeline operations', 'gas transportation', 'midstream operations',
-        'project manager', 'program manager', 'scrum master', 'project coordinator'
-    ],
-    'Skilled Labor': [
-        'technician', 'maintenance', 'mechanic', 'welder', 'electrician',
-        'apprentice', 'journeyman', 'crew', 'field', 'pipeline technician',
-        'compression technician', 'field operations', 'operator', 'control room'
-    ],
-    'Transportation/Logistics': [
-        'pipeline operations', 'gas transportation', 'logistics', 'supply chain',
-        'transportation', 'shipping', 'distribution'
-    ],
-    'Finance': [
-        'finance', 'financial', 'accounting', 'accountant', 'treasury',
-        'controller', 'audit', 'tax', 'budget'
-    ],
-    'Human Resources': [
-        'hr', 'human resources', 'recruiter', 'talent', 'people',
-        'benefit', 'compensation', 'payroll'
-    ],
-    'Sales': [
-        'sales', 'account manager', 'business development', 'bd',
-        'revenue', 'customer', 'commercial'
-    ],
-    'Marketing': [
-        'marketing', 'brand', 'digital marketing', 'content',
-        'social media', 'communications', 'public relations'
-    ],
-    'Legal': [
-        'legal', 'attorney', 'lawyer', 'counsel', 'compliance',
-        'contract', 'regulatory', 'paralegal'
-    ],
-    'Customer Service': [
-        'customer service', 'support', 'help desk', 'call center', 'client'
-    ],
-    'Administration': [
-        'admin', 'administrative', 'coordinator', 'assistant', 'office', 'clerk'
-    ],
-    'Quality': [
-        'quality', 'qa', 'qc', 'testing', 'inspector', 'assurance'
-    ],
-    'Security': [
-        'security', 'safety', 'guard', 'protection', 'hse', 'health safety'
-    ],
-    'Purchasing': [
-        'purchasing', 'procurement', 'buyer', 'sourcing', 'vendor'
-    ],
-    'Research': [
-        'research', 'r&d', 'development', 'innovation', 'scientist'
-    ],
+    'Engineering, Mechanical': ['mechanical', 'mechanical engineer'],
+    'Engineering, Electrical': ['electrical', 'electrical engineer', 'controls'],
+    'Manufacturing': ['manufacturing', 'production', 'assembly', 'fabrication'],
+    'Sales': ['sales', 'account manager', 'business development', 'account executive'],
+    'Customer Service': ['customer service', 'support', 'help desk', 'client'],
+    'Project Management': ['project manager', 'program manager', 'operations manager'],
+    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
+    'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'benefits'],
+    'Marketing': ['marketing', 'brand', 'communications', 'social media'],
+    'Legal': ['legal', 'attorney', 'counsel', 'compliance', 'contract'],
+    'Quality': ['quality', 'qa', 'qc', 'inspector', 'quality engineer'],
+    'Skilled Labor': ['technician', 'maintenance', 'mechanic', 'welder', 'operator'],
+    'Administration': ['admin', 'administrative', 'coordinator', 'assistant'],
+    'Security': ['security', 'safety', 'guard'],
 }
 
 
@@ -133,7 +84,7 @@ def _clean_html_description(element) -> str:
 
 
 def _map_job_to_function(cursor, job_title: str) -> Optional[int]:
-    """Map job title to function ID using keyword matching."""
+    """Map job title to function ID using keyword matching"""
     job_title_lower = job_title.lower()
     for function_name, keywords in _FUNCTION_KEYWORDS.items():
         for keyword in keywords:
@@ -153,7 +104,7 @@ def _map_job_to_function(cursor, job_title: str) -> Optional[int]:
 
 
 def _map_job_type(cursor, time_type: str) -> Optional[int]:
-    """Map Workday time type string to job_type_id."""
+    """Map Workday time type string to job_type_id"""
     canonical = normalize_job_type(time_type)
     if not canonical:
         logger.warning(f"  Could not map time type '{time_type}' to any job type")
@@ -168,6 +119,7 @@ def _map_job_type(cursor, time_type: str) -> Optional[int]:
 
 
 def _update_company_scrape_completed(cursor, company_id: int):
+    """Update last_full_scrape_completed timestamp for company"""
     cursor.execute("""
         UPDATE company SET last_full_scrape_completed = CURRENT_TIMESTAMP WHERE id = %s
     """, (company_id,))
@@ -175,6 +127,7 @@ def _update_company_scrape_completed(cursor, company_id: int):
 
 
 def _log_scraping_activity(cursor, job_board: str, company_id: int, stats: Dict):
+    """Log scraping results to scrapinglog table"""
     cursor.execute("""
         INSERT INTO scrapinglog (
             job_board, company_id, jobs_found, jobs_added, jobs_updated,
@@ -193,7 +146,7 @@ def _log_scraping_activity(cursor, job_board: str, company_id: int, stats: Dict)
 
 
 class SeleniumJobScraper:
-    """Handles JavaScript-heavy Workday job pages using Selenium."""
+    """Handles JavaScript-heavy Workday job pages using Selenium"""
 
     def __init__(self, headless=True):
         self.driver = None
@@ -215,7 +168,7 @@ class SeleniumJobScraper:
 
     def get_job_content(self, job_url: str, timeout=12) -> str:
         try:
-            logger.info("  Loading job page with Selenium...")
+            logger.info(f"  Loading job page with Selenium...")
             self.driver.get(job_url)
             wait = WebDriverWait(self.driver, timeout)
             try:
@@ -243,22 +196,34 @@ class SeleniumJobScraper:
                 pass
 
 
-class WilliamsScraper:
-    """Williams scraper — two-stage Tulsa filtering, no API-level location IDs."""
+class WorkdayScraper:
+    """
+    TODO: Rename this class (e.g. WilliamsScraper, AristocratScraper).
+    """
 
     def __init__(self, conn):
         self.conn = conn
         self.selenium_scraper = SeleniumJobScraper(headless=True)
 
+        # TODO: Fill in all company_config values.
+        # jobboard: the public-facing careers page URL (also used as Referer)
+        # api_endpoint: the /wday/cxs/.../jobs POST endpoint
+        # tulsa_location_ids: hex IDs from the locations facet — leave empty [] to
+        #   use two-stage text filtering instead (see williams scraper for that pattern)
+        # company_type_name: must match a value in the company_type table:
+        #   'Private Company', 'Public Company', 'Non-Profit', 'Government / Public Sector'
         self.company_config = {
-            'name': 'Williams',
-            'website': 'https://www.williams.com',
-            'jobboard': 'https://williams.wd5.myworkdayjobs.com/External/',
-            'api_endpoint': 'https://williams.wd5.myworkdayjobs.com/wday/cxs/williams/External/jobs',
-            'workday_base_url': 'https://williams.wd5.myworkdayjobs.com/External',
-            'workday_origin': 'https://williams.wd5.myworkdayjobs.com',
-            'company_type_name': 'Public Company',
-            'source_job_board': 'Williams Workday',
+            'name': 'TODO Company Name',                          # must match company.common_name in DB
+            'website': 'https://www.TODO.com',
+            'jobboard': 'https://TODO.wd5.myworkdayjobs.com/en-US/External',
+            'api_endpoint': 'https://TODO.wd5.myworkdayjobs.com/wday/cxs/TODO/External/jobs',
+            'workday_base_url': 'https://TODO.wd5.myworkdayjobs.com/en-US/External',
+            'workday_origin': 'https://TODO.wd5.myworkdayjobs.com',
+            'tulsa_location_ids': [
+                # 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',  # TODO: add Tulsa location ID(s)
+            ],
+            'company_type_name': 'Private Company',               # TODO: adjust if needed
+            'source_job_board': 'TODO Company Workday',           # label written to scrapinglog
         }
 
         self.session = requests.Session()
@@ -271,7 +236,7 @@ class WilliamsScraper:
 
     def establish_session(self) -> bool:
         try:
-            logger.info("Establishing session with Williams careers page...")
+            logger.info(f"Establishing session with {self.company_config['name']} careers page...")
             response = self.session.get(self.company_config['jobboard'])
             response.raise_for_status()
             logger.info("Session established successfully")
@@ -281,7 +246,7 @@ class WilliamsScraper:
             return False
 
     def get_job_listings(self) -> List[Dict]:
-        """Fetch all Williams jobs (no location filter — filter in code)."""
+        """Fetch job listings from the Workday API with pagination."""
         all_jobs = []
         limit = 20
         offset = 0
@@ -290,7 +255,13 @@ class WilliamsScraper:
         while True:
             try:
                 logger.info(f"Fetching jobs with offset: {offset}")
-                body = {"limit": limit, "offset": offset}
+
+                # Strategy A: filter by location IDs (preferred)
+                body = {"limit": limit, "offset": offset, "searchText": ""}
+                if self.company_config['tulsa_location_ids']:
+                    body["appliedFacets"] = {"locations": self.company_config['tulsa_location_ids']}
+                # Strategy B: no location filter — fetch all, filter in code
+                # (remove the appliedFacets block above and filter locationsText after)
 
                 response = self.session.post(
                     self.company_config['api_endpoint'],
@@ -328,70 +299,21 @@ class WilliamsScraper:
 
         return all_jobs
 
-    def filter_potential_tulsa_jobs(self, jobs: List[Dict]) -> List[Dict]:
-        """Stage 1: accept jobs with 'tulsa' in locationsText or multi-location indicator."""
-        filtered = []
-        logger.info(f"Stage 1 filter: starting with {len(jobs)} total jobs")
-
-        for job in jobs:
-            location_text = job.get('locationsText', '')
-            title = job.get('title', 'Unknown')
-
-            if 'tulsa' in location_text.lower():
-                filtered.append(job)
-                logger.info(f"  Stage 1 ACCEPT (Tulsa): {title} | {location_text}")
-            elif 'locations' in location_text.lower():
-                filtered.append(job)
-                logger.info(f"  Stage 1 ACCEPT (multi-location): {title} | {location_text}")
-            else:
-                logger.debug(f"  Stage 1 reject: {title} | {location_text}")
-
-        logger.info(f"Stage 1: {len(filtered)} / {len(jobs)} jobs passed")
-        return filtered
-
-    def validate_tulsa_job(self, html: str, job_title: str) -> bool:
-        """Stage 2: confirm detail page div[data-automation-id='locations'] contains Tulsa."""
-        try:
-            soup = BeautifulSoup(html, 'html.parser')
-            locations_div = soup.find('div', {'data-automation-id': 'locations'})
-
-            if locations_div:
-                location_text = locations_div.get_text()
-                if 'tulsa' in location_text.lower():
-                    logger.info(f"  Stage 2 ACCEPT: Tulsa found in locations div")
-                    return True
-                logger.info(f"  Stage 2 reject: locations div text = {location_text.strip()!r}")
-                return False
-
-            # Fallback: search page text for Tulsa indicators
-            page_text = soup.get_text()
-            for indicator in ['OK Tulsa', 'Tulsa, OK', 'Tulsa,OK']:
-                if indicator.lower() in page_text.lower():
-                    logger.info(f"  Stage 2 ACCEPT (fallback): found '{indicator}' in page")
-                    return True
-
-            logger.info("  Stage 2 reject: no locations div and no Tulsa in page text")
-            return False
-
-        except Exception as e:
-            logger.warning(f"  Error in Stage 2 validation: {e}")
-            return False
-
     def _map_remote_type_to_office_location(self, cursor, remote_type: str) -> Optional[int]:
         canonical = normalize_work_location(remote_type)
         if not canonical:
-            logger.warning(f"  Could not map remote type '{remote_type}' to any work location")
+            logger.warning(f"Could not map remote type '{remote_type}' to any work location")
             return None
         cursor.execute("SELECT id FROM officelocations WHERE name = %s", (canonical,))
         result = cursor.fetchone()
         if result:
             logger.info(f"  Mapped remote type '{remote_type}' -> '{canonical}' (id: {result['id']})")
             return result['id']
-        logger.warning(f"  Work location '{canonical}' not found in officelocations table")
+        logger.warning(f"Work location '{canonical}' not found in officelocations table")
         return None
 
     def extract_job_content(self, cursor, html_content: str) -> tuple:
-        """Parse detail page: return (clean_description, extracted_fields dict)."""
+        """Parse detail page HTML: extract metadata fields and clean description."""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
 
@@ -399,31 +321,41 @@ class WilliamsScraper:
                 'posting_id': None,
                 'time_type': None,
                 'office_location_id': None,
+                'date_posted': None,
+                'date_closed': None,
+                'minimum_salary': None,
+                'maximum_salary': None,
             }
 
-            # Extract posting ID (R-number pattern)
-            for element in soup.find_all(string=re.compile(r'^R\d{5,}$')):
-                extracted_fields['posting_id'] = element.strip()
-                logger.info(f"  Extracted posting ID: {extracted_fields['posting_id']}")
-                break
+            # Extract posting ID (Workday R-number pattern)
+            try:
+                for element in soup.find_all(string=re.compile(r'^R\d{5,}$')):
+                    extracted_fields['posting_id'] = element.strip()
+                    logger.info(f"  Extracted posting ID: {extracted_fields['posting_id']}")
+                    break
+            except Exception as e:
+                logger.warning(f"  Could not extract posting ID: {e}")
 
-            # Extract metadata from dt/dd pairs
-            for dt in soup.find_all('dt'):
-                label = dt.get_text(strip=True).lower()
-                dd = dt.find_next_sibling('dd')
-                if not dd:
-                    continue
-                value = dd.get_text(strip=True)
+            # Extract metadata from dt/dd pairs (Remote Type, Time Type, etc.)
+            try:
+                for dt in soup.find_all('dt'):
+                    label = dt.get_text(strip=True).lower()
+                    dd = dt.find_next_sibling('dd')
+                    if not dd:
+                        continue
+                    value = dd.get_text(strip=True)
 
-                if re.search(r'remote\s+type', label):
-                    office_location_id = self._map_remote_type_to_office_location(cursor, value)
-                    if office_location_id:
-                        extracted_fields['office_location_id'] = office_location_id
-                    logger.info(f"  Remote type (raw): '{value}'")
+                    if re.search(r'remote\s+type', label):
+                        office_location_id = self._map_remote_type_to_office_location(cursor, value)
+                        if office_location_id:
+                            extracted_fields['office_location_id'] = office_location_id
+                        logger.info(f"  Remote type (raw): '{value}' -> office_location_id: {office_location_id}")
 
-                elif re.search(r'time\s+type', label):
-                    extracted_fields['time_type'] = value
-                    logger.info(f"  Time type (raw): '{value}'")
+                    elif re.search(r'time\s+type', label):
+                        extracted_fields['time_type'] = value
+                        logger.info(f"  Time type (raw): '{value}'")
+            except Exception as e:
+                logger.warning(f"  Could not extract detail page metadata: {e}")
 
             # Strip non-content tags, then extract clean description
             for tag in soup.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
@@ -457,21 +389,17 @@ class WilliamsScraper:
             logger.warning(f"Error extracting job content: {e}")
             return html_content, {}
 
+    def download_job_details(self, cursor, job_url: str) -> tuple:
+        html_content = self.selenium_scraper.get_job_content(job_url)
+        if html_content:
+            return self.extract_job_content(cursor, html_content)
+        return "", {}
+
     def create_scraping_hash(self, title: str, url: str, description: str) -> str:
         return hashlib.md5(f"{title}{url}{description}".encode('utf-8')).hexdigest()
 
     def scrape_jobs(self) -> Dict:
-        stats = {
-            'found': 0,
-            'stage1_accepted': 0,
-            'stage1_rejected': 0,
-            'stage2_accepted': 0,
-            'stage2_rejected': 0,
-            'added': 0,
-            'updated': 0,
-            'skipped': 0,
-            'errors': [],
-        }
+        stats = {'found': 0, 'added': 0, 'updated': 0, 'skipped': 0, 'errors': []}
 
         try:
             with self.conn.cursor() as cursor:
@@ -496,37 +424,23 @@ class WilliamsScraper:
                 tulsa_city_id = result['id'] if result else None
                 logger.info(f"  Tulsa city_id: {tulsa_city_id}")
 
-                # Step 4: Fetch all jobs from API
-                logger.info("Step 4: Fetching all jobs from Williams Workday API...")
+                # Step 4: Get job listings from API
+                logger.info("Step 4: Getting job listings from API...")
                 all_jobs = self.get_job_listings()
                 if not all_jobs:
                     raise Exception("No jobs retrieved from API")
-                logger.info(f"  Retrieved {len(all_jobs)} total jobs from API")
+                logger.info(f"  Retrieved {len(all_jobs)} jobs from API")
                 stats['found'] = len(all_jobs)
 
-                # Step 5: Stage 1 filter
-                logger.info("Step 5: Stage 1 filter — potential Tulsa jobs...")
-                potential_tulsa_jobs = self.filter_potential_tulsa_jobs(all_jobs)
-                stats['stage1_accepted'] = len(potential_tulsa_jobs)
-                stats['stage1_rejected'] = len(all_jobs) - len(potential_tulsa_jobs)
-                stats['skipped'] += stats['stage1_rejected']
-
-                if not potential_tulsa_jobs:
-                    logger.warning("No potential Tulsa jobs after Stage 1 filter")
-                    _log_scraping_activity(cursor, self.company_config['source_job_board'], company_id, stats)
-                    return stats
-
-                # Step 6: Process each candidate
-                logger.info(f"Step 6: Processing {len(potential_tulsa_jobs)} candidate jobs...")
-                for i, job in enumerate(potential_tulsa_jobs):
+                # Step 5: Process each job
+                for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
-                        location = job.get('locationsText', 'Unknown')
-                        logger.info(f"Processing job {i+1}/{len(potential_tulsa_jobs)}: {title} | {location}")
+                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title}")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
-                            logger.warning("  No externalPath, skipping")
+                            logger.warning("  No externalPath found, skipping")
                             stats['skipped'] += 1
                             continue
 
@@ -535,37 +449,14 @@ class WilliamsScraper:
 
                         existing_job_id = check_existing_job_by_url(cursor, job_url)
                         if existing_job_id:
-                            logger.info(f"  Existing job (ID: {existing_job_id}) — timestamps updated")
                             stats['updated'] += 1
                             continue
 
-                        # New job — scrape detail page
-                        logger.info("  New job — loading detail page...")
-                        job_html = self.selenium_scraper.get_job_content(job_url)
-                        if not job_html or len(job_html.strip()) < 100:
-                            logger.warning("  Failed to get page content, skipping")
-                            stats['skipped'] += 1
-                            continue
-
-                        # Stage 2 validation
-                        if not self.validate_tulsa_job(job_html, title):
-                            logger.info("  Job rejected by Stage 2 filter")
-                            stats['stage2_rejected'] += 1
-                            stats['skipped'] += 1
-                            continue
-
-                        stats['stage2_accepted'] += 1
-                        logger.info("  Job confirmed as Tulsa position")
-
-                        # Extract description and metadata
-                        job_description, extracted_fields = self.extract_job_content(cursor, job_html)
+                        job_description, extracted_fields = self.download_job_details(cursor, job_url)
                         if not job_description or len(job_description.strip()) < 100:
-                            logger.warning("  Insufficient description content, skipping")
+                            logger.warning("  Failed to get meaningful job content, skipping")
                             stats['skipped'] += 1
                             continue
-
-                        time_type_raw = extracted_fields.get('time_type', '')
-                        logger.info(f"  Time type from detail page: '{time_type_raw}'")
 
                         job_data = {
                             'job_title': title,
@@ -574,15 +465,18 @@ class WilliamsScraper:
                             'date_posted': parse_relative_date(job.get('postedOn', '')),
                             'scraping_hash': self.create_scraping_hash(title, job_url, job_description),
                             'function': _map_job_to_function(cursor, title),
-                            'job_type_id': _map_job_type(cursor, time_type_raw),
+                            'job_type_id': _map_job_type(cursor, extracted_fields.get('time_type', '')),
                             'city_id': tulsa_city_id,
                             'posting_id': extracted_fields.get('posting_id'),
+                            'date_closed': extracted_fields.get('date_closed'),
+                            'minimum_salary': extracted_fields.get('minimum_salary'),
+                            'maximum_salary': extracted_fields.get('maximum_salary'),
                             'office_location_id': extracted_fields.get('office_location_id'),
                         }
 
                         job_id = store_job_listing(cursor, job_data, company_id,
                                                    self.company_config['source_job_board'])
-                        logger.info(f"  Stored job with ID: {job_id}")
+                        logger.info(f"  ✓ Stored job with ID: {job_id}")
                         stats['added'] += 1
 
                         time.sleep(0.5)
@@ -593,16 +487,16 @@ class WilliamsScraper:
                         stats['errors'].append(error_msg)
                         stats['skipped'] += 1
 
-                # Step 7: Mark stale jobs as closed
-                logger.info("Step 7: Marking stale jobs as closed...")
+                # Step 6: Mark stale jobs as closed
+                logger.info("Step 6: Marking stale jobs as closed...")
                 mark_stale_jobs_closed(cursor, company_id)
 
-                # Step 8: Update company scrape completion
-                logger.info("Step 8: Updating company scrape completion...")
+                # Step 7: Update company scrape completion
+                logger.info("Step 7: Updating company scrape completion...")
                 _update_company_scrape_completed(cursor, company_id)
 
-                # Step 9: Log results
-                logger.info("Step 9: Logging results...")
+                # Step 8: Log results
+                logger.info("Step 8: Logging results...")
                 _log_scraping_activity(cursor, self.company_config['source_job_board'], company_id, stats)
 
         except Exception as e:
@@ -622,21 +516,17 @@ def main():
     scraper = None
     try:
         conn = get_database_connection()
-        scraper = WilliamsScraper(conn)
+        scraper = WorkdayScraper(conn)  # TODO: rename to match class name above
 
-        logger.info("Starting Williams job scraping (two-stage Tulsa filter)...")
+        logger.info(f"Starting {scraper.company_config['name']} job scraping...")
         results = scraper.scrape_jobs()
 
-        logger.info("=== WILLIAMS SCRAPING SUMMARY ===")
-        logger.info(f"Jobs found (API total):   {results['found']}")
-        logger.info(f"Stage 1 accepted:         {results['stage1_accepted']}")
-        logger.info(f"Stage 1 rejected:         {results['stage1_rejected']}")
-        logger.info(f"Stage 2 confirmed Tulsa:  {results['stage2_accepted']}")
-        logger.info(f"Stage 2 non-Tulsa:        {results['stage2_rejected']}")
-        logger.info(f"Jobs added:               {results['added']}")
-        logger.info(f"Jobs updated:             {results['updated']}")
-        logger.info(f"Jobs skipped:             {results['skipped']}")
-        logger.info(f"Errors:                   {len(results['errors'])}")
+        logger.info("=== SCRAPING SUMMARY ===")
+        logger.info(f"Jobs found:   {results['found']}")
+        logger.info(f"Jobs added:   {results['added']}")
+        logger.info(f"Jobs updated: {results['updated']}")
+        logger.info(f"Jobs skipped: {results['skipped']}")
+        logger.info(f"Errors:       {len(results['errors'])}")
 
         if results['errors']:
             logger.error("Errors encountered:")
