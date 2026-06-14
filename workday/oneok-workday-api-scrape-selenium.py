@@ -262,7 +262,7 @@ class OneOKScraper:
         self.selenium_scraper = SeleniumJobScraper(headless=True)
 
         self.company_config = {
-            'name': 'ONEOK',
+            'name': 'ONEOK, Inc.',
             'website': 'https://www.oneok.com',
             'jobboard': 'https://oneok.wd1.myworkdayjobs.com/ONEOK/',
             'api_endpoint': 'https://oneok.wd1.myworkdayjobs.com/wday/cxs/oneok/ONEOK/jobs',
