@@ -463,11 +463,16 @@ class WorkdayScraper:
                 })
                 logger.info(f"  Resolved company ID: {company_id}")
 
-                # Step 3: Look up Tulsa city ID
+                # Step 3: Look up Tulsa city ID and On-site office location ID
                 cursor.execute("SELECT id FROM cities WHERE city_name = 'Tulsa'")
                 result = cursor.fetchone()
                 tulsa_city_id = result['id'] if result else None
                 logger.info(f"  Tulsa city_id: {tulsa_city_id}")
+
+                cursor.execute("SELECT id FROM officelocations WHERE name = 'On-site'")
+                result = cursor.fetchone()
+                onsite_office_id = result['id'] if result else None
+                logger.info(f"  On-site office_location_id: {onsite_office_id}")
 
                 # Step 4: Get job listings from API
                 logger.info("Step 4: Getting job listings from API...")
@@ -516,7 +521,7 @@ class WorkdayScraper:
                             'date_closed': extracted_fields.get('date_closed'),
                             'minimum_salary': extracted_fields.get('minimum_salary'),
                             'maximum_salary': extracted_fields.get('maximum_salary'),
-                            'office_location_id': extracted_fields.get('office_location_id'),
+                            'office_location_id': extracted_fields.get('office_location_id') or onsite_office_id,
                         }
 
                         job_id = store_job_listing(cursor, job_data, company_id,

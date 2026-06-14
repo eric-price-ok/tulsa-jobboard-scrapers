@@ -470,9 +470,14 @@ class RelationInsuranceScraper:
                 })
                 logger.info(f"  Resolved company ID: {company_id}")
 
-                # Step 3: Look up Tulsa city ID
+                # Step 3: Look up Tulsa city ID and On-site office location ID
                 tulsa_city_id = get_city_id(cursor, 'Tulsa')
                 logger.info(f"  Tulsa city_id: {tulsa_city_id}")
+
+                cursor.execute("SELECT id FROM officelocations WHERE name = 'On-site'")
+                result = cursor.fetchone()
+                onsite_office_id = result['id'] if result else None
+                logger.info(f"  On-site office_location_id: {onsite_office_id}")
 
                 # Step 4: Fetch Tulsa jobs from API
                 logger.info("Step 4: Fetching jobs from API...")
@@ -534,7 +539,7 @@ class RelationInsuranceScraper:
                             'job_type_id':        _map_job_type(cursor, time_type_raw),
                             'city_id':            tulsa_city_id,
                             'posting_id':         extracted_fields.get('posting_id'),
-                            'office_location_id': extracted_fields.get('office_location_id'),
+                            'office_location_id': extracted_fields.get('office_location_id') or onsite_office_id,
                             'minimum_salary':     extracted_fields.get('minimum_salary'),
                             'maximum_salary':     extracted_fields.get('maximum_salary'),
                         }

@@ -496,7 +496,7 @@ class OneOKScraper:
                 })
                 logger.info(f"  Resolved company ID: {company_id}")
 
-                # Step 3: Look up Tulsa city ID and Remote office location ID
+                # Step 3: Look up Tulsa city ID and office location IDs
                 tulsa_city_id = get_city_id(cursor, 'Tulsa')
                 logger.info(f"  Tulsa city_id: {tulsa_city_id}")
 
@@ -504,6 +504,11 @@ class OneOKScraper:
                 result = cursor.fetchone()
                 remote_office_id = result['id'] if result else None
                 logger.info(f"  Remote office_location_id: {remote_office_id}")
+
+                cursor.execute("SELECT id FROM officelocations WHERE name = 'On-site'")
+                result = cursor.fetchone()
+                onsite_office_id = result['id'] if result else None
+                logger.info(f"  On-site office_location_id: {onsite_office_id}")
 
                 # Step 4: Fetch all jobs and filter
                 logger.info("Step 4: Fetching jobs from API...")
@@ -583,8 +588,8 @@ class OneOKScraper:
                         if not function_id:
                             function_id = _map_job_to_function(cursor, title)
 
-                        # Work location: remote override takes priority over dt/dd
-                        office_location_id = override_office_id or extracted_fields.get('office_location_id')
+                        # Work location: remote override → dt/dd → default On-site
+                        office_location_id = override_office_id or extracted_fields.get('office_location_id') or onsite_office_id
 
                         time_type_raw = extracted_fields.get('time_type', '')
                         logger.info(f"  Time type from detail page: '{time_type_raw}'")

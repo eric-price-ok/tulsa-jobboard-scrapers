@@ -269,6 +269,50 @@ class WilliamsScraper:
             'Sec-GPC': '1'
         })
 
+    def discover_tulsa_location_ids(self) -> None:
+        """
+        One-time helper: probe the API and print all Oklahoma/Tulsa location facet IDs.
+        Run with: python williams-workday-api-selenium-scrape.py --discover-locations
+        Copy the IDs into company_config['tulsa_location_ids'] to switch to Strategy A.
+        """
+        try:
+            logger.info("Probing Williams API for location facets...")
+            response = self.session.post(
+                self.company_config['api_endpoint'],
+                json={"limit": 0, "offset": 0, "searchText": ""},
+                headers={
+                    'Referer': self.company_config['jobboard'],
+                    'Origin': self.company_config['workday_origin'],
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            location_facets = next(
+                (f for f in data.get('facets', []) if f.get('facetParameter') == 'locations'),
+                None
+            )
+            if not location_facets:
+                print("No location facets found in API response")
+                return
+
+            all_facets = location_facets.get('facets', [])
+            print(f"\nTotal location facets: {len(all_facets)}")
+            print("\nOklahoma / Tulsa locations:")
+            for facet in all_facets:
+                descriptor = facet.get('descriptor', '')
+                if 'oklahoma' in descriptor.lower() or 'tulsa' in descriptor.lower():
+                    print(f"  ID: {facet['id']}  count: {facet.get('count', '?'):>4}  {descriptor}")
+
+            print("\nAll locations:")
+            for facet in sorted(all_facets, key=lambda x: x.get('descriptor', '')):
+                print(f"  ID: {facet['id']}  count: {facet.get('count', '?'):>4}  {facet.get('descriptor', '')}")
+
+        except Exception as e:
+            logger.error(f"Error probing location facets: {e}")
+
     def establish_session(self) -> bool:
         try:
             logger.info("Establishing session with Williams careers page...")
@@ -490,11 +534,16 @@ class WilliamsScraper:
                 })
                 logger.info(f"  Resolved company ID: {company_id}")
 
-                # Step 3: Look up Tulsa city ID
+                # Step 3: Look up Tulsa city ID and On-site office location ID
                 cursor.execute("SELECT id FROM cities WHERE city_name = 'Tulsa'")
                 result = cursor.fetchone()
                 tulsa_city_id = result['id'] if result else None
                 logger.info(f"  Tulsa city_id: {tulsa_city_id}")
+
+                cursor.execute("SELECT id FROM officelocations WHERE name = 'On-site'")
+                result = cursor.fetchone()
+                onsite_office_id = result['id'] if result else None
+                logger.info(f"  On-site office_location_id: {onsite_office_id}")
 
                 # Step 4: Fetch all jobs from API
                 logger.info("Step 4: Fetching all jobs from Williams Workday API...")
@@ -577,7 +626,7 @@ class WilliamsScraper:
                             'job_type_id': _map_job_type(cursor, time_type_raw),
                             'city_id': tulsa_city_id,
                             'posting_id': extracted_fields.get('posting_id'),
-                            'office_location_id': extracted_fields.get('office_location_id'),
+                            'office_location_id': extracted_fields.get('office_location_id') or onsite_office_id,
                         }
 
                         job_id = store_job_listing(cursor, job_data, company_id,
@@ -618,11 +667,17 @@ class WilliamsScraper:
 
 
 def main():
+    import sys
     conn = None
     scraper = None
     try:
         conn = get_database_connection()
         scraper = WilliamsScraper(conn)
+
+        if '--discover-locations' in sys.argv:
+            scraper.establish_session()
+            scraper.discover_tulsa_location_ids()
+            return 0
 
         logger.info("Starting Williams job scraping (two-stage Tulsa filter)...")
         results = scraper.scrape_jobs()
