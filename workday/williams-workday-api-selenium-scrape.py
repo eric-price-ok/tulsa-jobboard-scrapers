@@ -279,7 +279,7 @@ class WilliamsScraper:
             logger.info("Probing Williams API for location facets...")
             response = self.session.post(
                 self.company_config['api_endpoint'],
-                json={"limit": 0, "offset": 0, "searchText": ""},
+                json={"limit": 20, "offset": 0},
                 headers={
                     'Referer': self.company_config['jobboard'],
                     'Origin': self.company_config['workday_origin'],
