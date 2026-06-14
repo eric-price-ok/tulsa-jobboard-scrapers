@@ -340,7 +340,7 @@ class OneOKScraper:
         return all_jobs
 
     def filter_served_jobs(self, jobs: List[Dict]) -> List[Dict]:
-        """Keep jobs in a served metro city or explicitly marked Remote."""
+        """Keep jobs in a served metro city, Remote, or multi-location (validated later)."""
         filtered = []
         logger.info(f"Filtering {len(jobs)} total jobs for served locations...")
         for job in jobs:
@@ -352,6 +352,11 @@ class OneOKScraper:
             elif 'remote' in location_text.lower():
                 filtered.append(job)
                 logger.debug(f"  Accept (remote): {title} | {location_text}")
+            elif 'location' in location_text.lower():
+                # "Multiple Locations" — Workday hides the city list in the API response.
+                # Pass through and validate against the detail page locations div.
+                filtered.append(job)
+                logger.debug(f"  Accept (multi-location, needs validation): {title} | {location_text}")
             else:
                 logger.debug(f"  Reject: {title} | {location_text}")
         logger.info(f"Filter: {len(filtered)} / {len(jobs)} jobs accepted")
@@ -374,13 +379,22 @@ class OneOKScraper:
             soup = BeautifulSoup(html_content, 'html.parser')
 
             extracted_fields = {
-                'posting_id':       None,
-                'time_type':        None,
+                'posting_id':         None,
+                'time_type':          None,
                 'office_location_id': None,
-                'category':         None,
-                'minimum_salary':   None,
-                'maximum_salary':   None,
+                'category':           None,
+                'minimum_salary':     None,
+                'maximum_salary':     None,
+                'detail_city_id':     None,   # resolved from locations div for multi-location jobs
             }
+
+            # Extract city from locations div (used when locationsText is "Multiple Locations")
+            locations_div = soup.find('div', {'data-automation-id': 'locations'})
+            if locations_div:
+                city_name, city_id = match_location_to_city_id(cursor, locations_div.get_text())
+                if city_id:
+                    extracted_fields['detail_city_id'] = city_id
+                    logger.info(f"  City from detail page locations div: {city_name} (id: {city_id})")
 
             # Extract posting ID (R-number pattern)
             for element in soup.find_all(string=re.compile(r'^R\d{5,}$')):
@@ -528,21 +542,18 @@ class OneOKScraper:
                             stats['updated'] += 1
                             continue
 
-                        # Resolve city and work location
+                        # Phase 1 city resolution: try locationsText directly
                         city_name, city_id = match_location_to_city_id(cursor, locations_text)
                         is_remote = 'remote' in locations_text.lower()
+                        override_office_id = None
 
                         if city_id:
-                            logger.info(f"  City: {city_name} (id: {city_id})")
-                            override_office_id = None   # let dt/dd decide work location
+                            logger.info(f"  City from locationsText: {city_name} (id: {city_id})")
                         elif is_remote:
                             city_id = tulsa_city_id
                             override_office_id = remote_office_id
                             logger.info(f"  Remote job — city set to Tulsa, work location set to Remote")
-                        else:
-                            logger.info(f"  Skipping — location not in served area: '{locations_text}'")
-                            stats['skipped'] += 1
-                            continue
+                        # else: multi-location — city resolved after detail page download below
 
                         # Scrape detail page
                         job_html = self.selenium_scraper.get_job_content(job_url)
@@ -556,6 +567,16 @@ class OneOKScraper:
                             logger.warning("  Insufficient description content, skipping")
                             stats['skipped'] += 1
                             continue
+
+                        # Phase 2 city resolution: fall back to detail page locations div
+                        if not city_id:
+                            city_id = extracted_fields.get('detail_city_id')
+                            if city_id:
+                                logger.info(f"  City resolved from detail page (was multi-location)")
+                            else:
+                                logger.info(f"  Skipping — no Tulsa found in detail page: '{locations_text}'")
+                                stats['skipped'] += 1
+                                continue
 
                         # Function: category label takes priority over title keywords
                         function_id = _map_category_to_function(cursor, extracted_fields.get('category'))
