@@ -71,7 +71,7 @@
 |---------|------|-----|--------|
 | AAA | `workday/aaa-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
 | AEP | `workday/aep-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
-| Aristocrat | `workday/aristocrat-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
+| Aristocrat | `workday/aristocrat-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
 | ChampionX | `workday/championx-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
 | Greenheck | `workday/greenheck-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
 | ONEOK | `workday/oneok-workday-api-scrape-selenium.py` | Gen 2 | Unconfirmed |
