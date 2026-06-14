@@ -77,7 +77,7 @@
 | ONEOK | `workday/oneok-workday-api-scrape-selenium.py` | Gen 1+ | Unconfirmed |
 | Relation Insurance | `workday/relation-workday-api-scrape-selenium.py` | Gen 1+ | Unconfirmed |
 | Tulsa County Sheriff's Office | `workday/tcso-scrape-selenium.py` | Gen 1 | Unconfirmed |
-| Webco Industries | `workday/webco-workday-scrape-selenium.py` | Gen 1+ | Unconfirmed |
+| Webco Industries | `workday/webco-workday-scrape-selenium.py` | Gen 2 | Unconfirmed |
 | Williams Companies | `workday/williams-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
 
 ---
