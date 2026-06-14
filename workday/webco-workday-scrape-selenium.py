@@ -12,6 +12,7 @@ from utils.db_connection import get_database_connection, close_connection
 from utils.posting_operations import store_job_listing, check_existing_job_by_url, mark_stale_jobs_closed
 from utils.company_operations import get_or_create_company
 from utils.date_utilities import parse_relative_date
+from utils.location_utilities import match_location_to_city_id, get_city_id
 from utils.selenium_config import SeleniumConfig
 from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
 
@@ -408,11 +409,14 @@ class WebcoScraper:
                 })
                 logger.info(f"  Resolved company ID: {company_id}")
 
-                # Step 3: Look up Tulsa city ID
-                cursor.execute("SELECT id FROM cities WHERE city_name = 'Tulsa'")
+                # Step 3: Look up fallback city ID (Tulsa) and On-site office location
+                tulsa_city_id = get_city_id(cursor, 'Tulsa')
+                logger.info(f"  Tulsa fallback city_id: {tulsa_city_id}")
+
+                cursor.execute("SELECT id FROM officelocations WHERE name = 'On-site'")
                 result = cursor.fetchone()
-                tulsa_city_id = result['id'] if result else None
-                logger.info(f"  Tulsa city_id: {tulsa_city_id}")
+                onsite_id = result['id'] if result else None
+                logger.info(f"  On-site office_location_id: {onsite_id}")
 
                 # Step 4: Get job listings from API
                 logger.info("Step 4: Getting job listings from API...")
@@ -430,6 +434,19 @@ class WebcoScraper:
                         if raw_title != title:
                             logger.info(f"  Cleaned title: '{raw_title}' -> '{title}'")
                         logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title}")
+
+                        # Resolve city: locationsText first, raw title second, Tulsa fallback
+                        locations_text = job.get('locationsText', '')
+                        city_name, city_id = match_location_to_city_id(cursor, locations_text)
+                        if city_id:
+                            logger.info(f"  City from locationsText: {city_name} (id: {city_id})")
+                        else:
+                            city_name, city_id = match_location_to_city_id(cursor, raw_title)
+                            if city_id:
+                                logger.info(f"  City from title: {city_name} (id: {city_id})")
+                            else:
+                                city_id = tulsa_city_id
+                                logger.info(f"  City: Tulsa (fallback, locationsText='{locations_text}')")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
@@ -468,9 +485,9 @@ class WebcoScraper:
                             'scraping_hash': self.create_scraping_hash(title, job_url, job_description),
                             'function': _map_job_to_function(cursor, title),
                             'job_type_id': _map_job_type(cursor, time_type_raw),
-                            'city_id': tulsa_city_id,
+                            'city_id': city_id,
                             'posting_id': extracted_fields.get('posting_id'),
-                            'office_location_id': extracted_fields.get('office_location_id'),
+                            'office_location_id': onsite_id,
                         }
 
                         job_id = store_job_listing(cursor, job_data, company_id,
