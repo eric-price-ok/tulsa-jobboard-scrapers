@@ -178,7 +178,14 @@ class SeleniumJobScraper:
             except TimeoutException:
                 logger.warning("  Body tag not found within timeout")
                 return ""
-            time.sleep(1.5)
+            # Wait for Workday job content to render; fall back to timed sleep on cold start
+            try:
+                wait.until(EC.presence_of_element_located(
+                    (By.CSS_SELECTOR, '[data-automation-id="jobPostingDescription"], [data-automation-id="jobDescription"]')
+                ))
+                time.sleep(0.5)
+            except TimeoutException:
+                time.sleep(1.5)
             page_source = self.driver.page_source
             logger.info(f"  Retrieved page source: {len(page_source)} characters")
             return page_source
