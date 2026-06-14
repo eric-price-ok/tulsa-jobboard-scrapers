@@ -3,10 +3,7 @@
 williams-workday-api-selenium-scrape.py
 Williams Companies Workday API + Selenium scraper (Gen 2)
 
-Williams does not expose Tulsa location IDs for API filtering, so this scraper
-uses a two-stage approach:
-  Stage 1: filter API listings by locationsText ('tulsa' or multi-location 'locations')
-  Stage 2: validate the detail page div[data-automation-id="locations"] contains 'Tulsa'
+Uses appliedFacets location ID to filter to Tulsa jobs at the API level.
 """
 
 from utils.db_connection import get_database_connection, close_connection
@@ -244,7 +241,6 @@ class SeleniumJobScraper:
 
 
 class WilliamsScraper:
-    """Williams scraper — two-stage Tulsa filtering, no API-level location IDs."""
 
     def __init__(self, conn):
         self.conn = conn
@@ -257,6 +253,7 @@ class WilliamsScraper:
             'api_endpoint': 'https://williams.wd5.myworkdayjobs.com/wday/cxs/williams/External/jobs',
             'workday_base_url': 'https://williams.wd5.myworkdayjobs.com/External',
             'workday_origin': 'https://williams.wd5.myworkdayjobs.com',
+            'tulsa_location_ids': ['36dce61c1e3f012c616b53134409cd37'],
             'company_type_name': 'Public Company',
             'source_job_board': 'Williams Workday',
         }
@@ -325,7 +322,7 @@ class WilliamsScraper:
             return False
 
     def get_job_listings(self) -> List[Dict]:
-        """Fetch all Williams jobs (no location filter — filter in code)."""
+        """Fetch Tulsa-area jobs from the Workday API using appliedFacets location filter."""
         all_jobs = []
         limit = 20
         offset = 0
@@ -334,7 +331,12 @@ class WilliamsScraper:
         while True:
             try:
                 logger.info(f"Fetching jobs with offset: {offset}")
-                body = {"limit": limit, "offset": offset}
+                body = {
+                    "appliedFacets": {"locations": self.company_config['tulsa_location_ids']},
+                    "limit": limit,
+                    "offset": offset,
+                    "searchText": "",
+                }
 
                 response = self.session.post(
                     self.company_config['api_endpoint'],
@@ -371,55 +373,6 @@ class WilliamsScraper:
                 break
 
         return all_jobs
-
-    def filter_potential_tulsa_jobs(self, jobs: List[Dict]) -> List[Dict]:
-        """Stage 1: accept jobs with 'tulsa' in locationsText or multi-location indicator."""
-        filtered = []
-        logger.info(f"Stage 1 filter: starting with {len(jobs)} total jobs")
-
-        for job in jobs:
-            location_text = job.get('locationsText', '')
-            title = job.get('title', 'Unknown')
-
-            if 'tulsa' in location_text.lower():
-                filtered.append(job)
-                logger.info(f"  Stage 1 ACCEPT (Tulsa): {title} | {location_text}")
-            elif 'locations' in location_text.lower():
-                filtered.append(job)
-                logger.info(f"  Stage 1 ACCEPT (multi-location): {title} | {location_text}")
-            else:
-                logger.debug(f"  Stage 1 reject: {title} | {location_text}")
-
-        logger.info(f"Stage 1: {len(filtered)} / {len(jobs)} jobs passed")
-        return filtered
-
-    def validate_tulsa_job(self, html: str, job_title: str) -> bool:
-        """Stage 2: confirm detail page div[data-automation-id='locations'] contains Tulsa."""
-        try:
-            soup = BeautifulSoup(html, 'html.parser')
-            locations_div = soup.find('div', {'data-automation-id': 'locations'})
-
-            if locations_div:
-                location_text = locations_div.get_text()
-                if 'tulsa' in location_text.lower():
-                    logger.info(f"  Stage 2 ACCEPT: Tulsa found in locations div")
-                    return True
-                logger.info(f"  Stage 2 reject: locations div text = {location_text.strip()!r}")
-                return False
-
-            # Fallback: search page text for Tulsa indicators
-            page_text = soup.get_text()
-            for indicator in ['OK Tulsa', 'Tulsa, OK', 'Tulsa,OK']:
-                if indicator.lower() in page_text.lower():
-                    logger.info(f"  Stage 2 ACCEPT (fallback): found '{indicator}' in page")
-                    return True
-
-            logger.info("  Stage 2 reject: no locations div and no Tulsa in page text")
-            return False
-
-        except Exception as e:
-            logger.warning(f"  Error in Stage 2 validation: {e}")
-            return False
 
     def _map_remote_type_to_office_location(self, cursor, remote_type: str) -> Optional[int]:
         canonical = normalize_work_location(remote_type)
@@ -505,17 +458,7 @@ class WilliamsScraper:
         return hashlib.md5(f"{title}{url}{description}".encode('utf-8')).hexdigest()
 
     def scrape_jobs(self) -> Dict:
-        stats = {
-            'found': 0,
-            'stage1_accepted': 0,
-            'stage1_rejected': 0,
-            'stage2_accepted': 0,
-            'stage2_rejected': 0,
-            'added': 0,
-            'updated': 0,
-            'skipped': 0,
-            'errors': [],
-        }
+        stats = {'found': 0, 'added': 0, 'updated': 0, 'skipped': 0, 'errors': []}
 
         try:
             with self.conn.cursor() as cursor:
@@ -545,33 +488,21 @@ class WilliamsScraper:
                 onsite_office_id = result['id'] if result else None
                 logger.info(f"  On-site office_location_id: {onsite_office_id}")
 
-                # Step 4: Fetch all jobs from API
-                logger.info("Step 4: Fetching all jobs from Williams Workday API...")
+                # Step 4: Fetch Tulsa jobs from API
+                logger.info("Step 4: Fetching Tulsa jobs from Williams Workday API...")
                 all_jobs = self.get_job_listings()
                 if not all_jobs:
                     raise Exception("No jobs retrieved from API")
-                logger.info(f"  Retrieved {len(all_jobs)} total jobs from API")
+                logger.info(f"  Retrieved {len(all_jobs)} jobs from API")
                 stats['found'] = len(all_jobs)
 
-                # Step 5: Stage 1 filter
-                logger.info("Step 5: Stage 1 filter — potential Tulsa jobs...")
-                potential_tulsa_jobs = self.filter_potential_tulsa_jobs(all_jobs)
-                stats['stage1_accepted'] = len(potential_tulsa_jobs)
-                stats['stage1_rejected'] = len(all_jobs) - len(potential_tulsa_jobs)
-                stats['skipped'] += stats['stage1_rejected']
-
-                if not potential_tulsa_jobs:
-                    logger.warning("No potential Tulsa jobs after Stage 1 filter")
-                    _log_scraping_activity(cursor, self.company_config['source_job_board'], company_id, stats)
-                    return stats
-
-                # Step 6: Process each candidate
-                logger.info(f"Step 6: Processing {len(potential_tulsa_jobs)} candidate jobs...")
-                for i, job in enumerate(potential_tulsa_jobs):
+                # Step 5: Process each job
+                logger.info(f"Step 5: Processing {len(all_jobs)} jobs...")
+                for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
-                        location = job.get('locationsText', 'Unknown')
-                        logger.info(f"Processing job {i+1}/{len(potential_tulsa_jobs)}: {title} | {location}")
+                        location = job.get('locationsText', '')
+                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title} | {location}")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
@@ -595,16 +526,6 @@ class WilliamsScraper:
                             logger.warning("  Failed to get page content, skipping")
                             stats['skipped'] += 1
                             continue
-
-                        # Stage 2 validation
-                        if not self.validate_tulsa_job(job_html, title):
-                            logger.info("  Job rejected by Stage 2 filter")
-                            stats['stage2_rejected'] += 1
-                            stats['skipped'] += 1
-                            continue
-
-                        stats['stage2_accepted'] += 1
-                        logger.info("  Job confirmed as Tulsa position")
 
                         # Extract description and metadata
                         job_description, extracted_fields = self.extract_job_content(cursor, job_html)
@@ -642,16 +563,16 @@ class WilliamsScraper:
                         stats['errors'].append(error_msg)
                         stats['skipped'] += 1
 
-                # Step 7: Mark stale jobs as closed
-                logger.info("Step 7: Marking stale jobs as closed...")
+                # Step 6: Mark stale jobs as closed
+                logger.info("Step 6: Marking stale jobs as closed...")
                 mark_stale_jobs_closed(cursor, company_id)
 
-                # Step 8: Update company scrape completion
-                logger.info("Step 8: Updating company scrape completion...")
+                # Step 7: Update company scrape completion
+                logger.info("Step 7: Updating company scrape completion...")
                 _update_company_scrape_completed(cursor, company_id)
 
-                # Step 9: Log results
-                logger.info("Step 9: Logging results...")
+                # Step 8: Log results
+                logger.info("Step 8: Logging results...")
                 _log_scraping_activity(cursor, self.company_config['source_job_board'], company_id, stats)
 
         except Exception as e:
@@ -679,19 +600,15 @@ def main():
             scraper.discover_tulsa_location_ids()
             return 0
 
-        logger.info("Starting Williams job scraping (two-stage Tulsa filter)...")
+        logger.info("Starting Williams job scraping...")
         results = scraper.scrape_jobs()
 
         logger.info("=== WILLIAMS SCRAPING SUMMARY ===")
-        logger.info(f"Jobs found (API total):   {results['found']}")
-        logger.info(f"Stage 1 accepted:         {results['stage1_accepted']}")
-        logger.info(f"Stage 1 rejected:         {results['stage1_rejected']}")
-        logger.info(f"Stage 2 confirmed Tulsa:  {results['stage2_accepted']}")
-        logger.info(f"Stage 2 non-Tulsa:        {results['stage2_rejected']}")
-        logger.info(f"Jobs added:               {results['added']}")
-        logger.info(f"Jobs updated:             {results['updated']}")
-        logger.info(f"Jobs skipped:             {results['skipped']}")
-        logger.info(f"Errors:                   {len(results['errors'])}")
+        logger.info(f"Jobs found:   {results['found']}")
+        logger.info(f"Jobs added:   {results['added']}")
+        logger.info(f"Jobs updated: {results['updated']}")
+        logger.info(f"Jobs skipped: {results['skipped']}")
+        logger.info(f"Errors:       {len(results['errors'])}")
 
         if results['errors']:
             logger.error("Errors encountered:")
