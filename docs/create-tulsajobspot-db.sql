@@ -188,6 +188,16 @@ CREATE TABLE public.jobtype (
     CONSTRAINT jobtype_pkey PRIMARY KEY (id)
 );
 
+INSERT INTO public.jobtype (name) VALUES
+    ('Full-time'),
+    ('Part-time'),
+    ('Contract'),
+    ('Contract-to-hire'),
+    ('Temporary'),
+    ('Internship'),
+    ('As Needed')
+ON CONFLICT (name) DO NOTHING;
+
 CREATE TABLE public.officelocations (
     id         serial4 NOT NULL,
     name       varchar(50) NOT NULL,
