@@ -10,6 +10,7 @@ import logging
 import hashlib
 import time
 import re
+from datetime import date
 from typing import Dict, List, Optional
 
 from utils.db_connection import get_database_connection
@@ -20,6 +21,7 @@ from utils.posting_operations import (
 from utils.company_operations import get_company_config_by_name
 from utils.utility_methods import setup_logging
 from utils.location_utilities import find_served_city, match_location_to_city_id
+from utils.date_utilities import normalize_date_string
 
 
 class DatabaseManager:
@@ -82,6 +84,18 @@ class DatabaseManager:
         self.logger.info(f"  No function match for '{job_title}'")
         return None
 
+    def get_job_type_id(self, name: str) -> Optional[int]:
+        with self.conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM jobtype WHERE name = %s", (name,))
+            result = cursor.fetchone()
+            return result['id'] if result else None
+
+    def get_office_location_id(self, name: str) -> Optional[int]:
+        with self.conn.cursor() as cursor:
+            cursor.execute("SELECT id FROM officelocations WHERE name = %s", (name,))
+            result = cursor.fetchone()
+            return result['id'] if result else None
+
     def update_company_scrape_completed(self, company_id: int):
         with self.conn.cursor() as cursor:
             cursor.execute("""
@@ -125,6 +139,8 @@ class BOKJobScraper:
         self.company_id = self.company_config['id']
         self.logger = setup_logging(self.company_config['name'])
         self.db.logger = self.logger
+        self.default_job_type_id = self.db.get_job_type_id('Full-time')
+        self.default_office_location_id = self.db.get_office_location_id('On-site')
 
         self.session = requests.Session()
         self.session.headers.update({
@@ -159,6 +175,33 @@ class BOKJobScraper:
                 return text
 
         return ''
+
+    def _extract_deadline_from_row(self, row) -> Optional[date]:
+        """Extract application deadline date from a job listing row."""
+        # Strategy 1: span whose text is/contains "Application Deadline" — date is next sibling
+        for span in row.find_all('span'):
+            if 'application deadline' in span.get_text(strip=True).lower():
+                for sib in span.next_siblings:
+                    sib_text = sib.get_text(strip=True) if hasattr(sib, 'get_text') else str(sib).strip()
+                    if sib_text:
+                        parsed = normalize_date_string(sib_text)
+                        if parsed:
+                            return parsed.date()
+                        break
+
+        # Strategy 2: regex scan each td for "Application Deadline <date>"
+        for td in row.find_all('td'):
+            td_text = td.get_text(separator=' ', strip=True)
+            match = re.search(
+                r'application\s+deadline[\s:]+(\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}|\w+ \d{1,2},?\s*\d{4})',
+                td_text, re.I
+            )
+            if match:
+                parsed = normalize_date_string(match.group(1))
+                if parsed:
+                    return parsed.date()
+
+        return None
 
     def get_job_listings(self) -> List[Dict]:
         """
@@ -237,11 +280,13 @@ class BOKJobScraper:
                 with self.db.conn.cursor() as cursor:
                     _, city_id = match_location_to_city_id(cursor, location_text)
 
+                deadline = self._extract_deadline_from_row(row)
                 all_jobs.append({
                     'title': link.get_text(strip=True),
                     'url': job_url,
                     'location': city_name,
-                    'city_id': city_id
+                    'city_id': city_id,
+                    'date_closed': deadline,
                 })
                 self.logger.info(f"  Queued: '{link.get_text(strip=True)}' ({city_name})")
 
@@ -331,6 +376,10 @@ class BOKJobScraper:
                         'scraping_hash': scraping_hash,
                         'function': self.db._map_job_function(job['title']),
                         'city_id': job['city_id'],
+                        'job_type_id': self.default_job_type_id,
+                        'office_location_id': self.default_office_location_id,
+                        'date_posted': date.today(),
+                        'date_closed': job.get('date_closed'),
                     }
 
                     job_id = self.db.store_job_listing(job_data, self.company_id)
