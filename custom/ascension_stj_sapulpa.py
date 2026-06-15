@@ -52,7 +52,7 @@ class DatabaseManager:
         with self.conn.cursor() as cursor:
             enhanced_job_data = job_data.copy()
             enhanced_job_data['company_id'] = company_id
-            return store_job_listing(cursor, enhanced_job_data, company_id, 'Ascension St. John Sapulpa')
+            return store_job_listing(cursor, enhanced_job_data, company_id, 'Ascension St. John - Sapulpa')
 
     def _map_job_type(self, job_type: str) -> Optional[int]:
         """Map job type string to job_type_id via canonical name lookup"""
@@ -465,7 +465,7 @@ class AscensionStJohnScraper:
             self.db.update_company_scrape_completed(self.company_id)
 
             self.logger.info("Step 6: Logging results...")
-            self.db.log_scraping_activity('Ascension St. John Sapulpa', stats)
+            self.db.log_scraping_activity('Ascension St. John - Sapulpa', stats)
 
         except Exception as e:
             error_msg = f"Scraping failed: {e}"
