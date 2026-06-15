@@ -255,27 +255,38 @@ class BOKJobScraper:
         return all_jobs
 
     def get_job_description(self, job_url: str) -> str:
-        """Download and trim a job detail page to its relevant content."""
+        """Download job detail page and extract the relevant description content."""
         try:
             self.logger.info(f"  Fetching job description: {job_url}")
             response = self.session.get(job_url)
             response.raise_for_status()
-            return self._trim_html(response.text)
+            return self._extract_job_content(response.text)
         except Exception as e:
             self.logger.error(f"  Error fetching job content: {e}")
             return ""
 
-    def _trim_html(self, html: str) -> str:
-        """Strip the style preamble and the boilerplate About BOK section."""
-        style_end = html.lower().find("</style>")
-        if style_end >= 0:
-            html = html[style_end + 8:]
+    def _extract_job_content(self, html: str) -> str:
+        """
+        Extract content from div.jobColumnOne, stopping before the
+        'Advertising Source' h2 tag.
+        """
+        soup = BeautifulSoup(html, 'html.parser')
 
-        about_match = re.search(r"<h4>About BOK Financial Corporation</h4>", html, re.IGNORECASE)
-        if about_match:
-            html = html[:about_match.start()]
+        column = soup.find('div', class_='jobColumnOne')
+        if not column:
+            self.logger.warning("  div.jobColumnOne not found — falling back to full body text")
+            body = soup.find('body')
+            return body.get_text(separator=' ', strip=True) if body else ''
 
-        return html
+        # Remove everything from the 'Advertising Source' h2 onward
+        for tag in column.find_all('h2'):
+            if 'advertising source' in tag.get_text(strip=True).lower():
+                for sibling in list(tag.find_next_siblings()):
+                    sibling.decompose()
+                tag.decompose()
+                break
+
+        return column.get_text(separator=' ', strip=True)
 
     def scrape_jobs(self) -> Dict:
         """Main scraping method"""
