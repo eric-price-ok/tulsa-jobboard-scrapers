@@ -137,21 +137,26 @@ class BOKJobScraper:
 
     def _extract_location_from_row(self, row) -> str:
         """Extract location text from a job listing row using multiple strategies."""
-        # Strategy 1: td with a class containing "location"
+        # Strategy 1: span.jobLocation — confirmed BOK/Taleo pattern
+        loc_span = row.find('span', class_='jobLocation')
+        if loc_span:
+            return loc_span.get_text(strip=True)
+
+        # Strategy 2: any span with class containing "location"
+        loc_span = row.find('span', class_=re.compile(r'location', re.I))
+        if loc_span:
+            return loc_span.get_text(strip=True)
+
+        # Strategy 3: td with a class containing "location"
         loc_td = row.find('td', class_=re.compile(r'location', re.I))
         if loc_td:
             return loc_td.get_text(strip=True)
 
-        # Strategy 2: any td whose text looks like a city/state (contains ", OK" or ", TX" etc.)
+        # Strategy 4: any td whose text looks like "City, ST"
         for td in row.find_all('td'):
             text = td.get_text(strip=True)
             if re.search(r',\s*[A-Z]{2}$', text):
                 return text
-
-        # Strategy 3: span with class containing "location"
-        loc_span = row.find('span', class_=re.compile(r'location', re.I))
-        if loc_span:
-            return loc_span.get_text(strip=True)
 
         return ''
 
@@ -190,8 +195,12 @@ class BOKJobScraper:
             # Taleo search results: each job is a <tr class="jobslisting ...">
             job_rows = soup.find_all('tr', class_=re.compile(r'jobslisting', re.I))
             if not job_rows:
-                # Fall back to finding job links directly if row structure differs
-                job_rows = [link.parent for link in soup.find_all('a', class_='jobTitle-link')]
+                # Fall back: walk up from each link to the enclosing <tr>
+                job_rows = []
+                for link in soup.find_all('a', class_='jobTitle-link'):
+                    tr = link.find_parent('tr')
+                    if tr:
+                        job_rows.append(tr)
 
             if not job_rows:
                 self.logger.info("No job rows found — end of results.")
