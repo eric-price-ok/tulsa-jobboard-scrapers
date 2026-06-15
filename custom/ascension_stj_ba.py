@@ -7,7 +7,7 @@ Handles Ascension job boards with Selenium for full job description extraction
 
 from utils.selenium_config import SeleniumConfig
 from utils.posting_operations import store_job_listing, load_active_jobs_cache, check_job_in_cache, update_job_verified_timestamp, mark_stale_jobs_closed
-from utils.utility_methods import setup_logging
+from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
 from utils.company_operations import get_company_config_by_name
 from utils.db_connection import get_database_connection
 from utils.location_utilities import get_city_id
@@ -55,36 +55,17 @@ class DatabaseManager:
             return store_job_listing(cursor, enhanced_job_data, company_id, 'Ascension St. John Broken Arrow')
 
     def _map_job_type(self, job_type: str) -> Optional[int]:
-        """Map job type to job_type_id using LIKE matching"""
-        if not job_type:
+        """Map job type string to job_type_id via canonical name lookup"""
+        canonical = normalize_job_type(job_type)
+        if not canonical:
             return None
-
-        job_type_lower = job_type.lower()
-
         with self.conn.cursor() as cursor:
-            cursor.execute("SELECT id FROM jobtype WHERE LOWER(name) LIKE %s", (f"%{job_type_lower}%",))
+            cursor.execute("SELECT id FROM jobtype WHERE name = %s", (canonical,))
             result = cursor.fetchone()
             if result:
-                self.logger.info(f"  Mapped '{job_type}' to job type ID: {result['id']}")
+                self.logger.info(f"  Mapped '{job_type}' to job type: {canonical}")
                 return result['id']
-
-            job_type_mappings = {
-                'full time': ['full time', 'full-time', 'fulltime'],
-                'part time': ['part time', 'part-time', 'parttime'],
-                'contract': ['contract', 'contractor'],
-                'per diem': ['per diem', 'perdiem', 'prn', 'as needed'],
-                'temporary': ['temporary', 'temp'],
-            }
-
-            for job_type_key, variations in job_type_mappings.items():
-                if any(var in job_type_lower for var in variations):
-                    cursor.execute("SELECT id FROM jobtype WHERE LOWER(name) LIKE %s", (f"%{job_type_key}%",))
-                    result = cursor.fetchone()
-                    if result:
-                        self.logger.info(f"  Mapped '{job_type}' to job type ID: {result['id']} via '{job_type_key}'")
-                        return result['id']
-
-        self.logger.warning(f"  Could not map '{job_type}' to any job type")
+        self.logger.warning(f"  Job type '{canonical}' not found in database")
         return None
 
     def _map_job_function(self, job_title: str) -> Optional[int]:
@@ -100,15 +81,15 @@ class DatabaseManager:
                     'nurse', 'rn', 'lpn', 'lvn', 'cna', 'physician', 'doctor', 'md', 'do',
                     'therapist', 'technician', 'tech', 'medical', 'clinical', 'healthcare',
                     'pharmacy', 'pharmacist', 'respiratory', 'radiology', 'laboratory',
-                    'surgical', 'surgery', 'anesthesia', 'emergency', 'critical care',
-                    'icu', 'er', 'med/surg', 'pediatric', 'oncology', 'cardiology'
+                    'surgical', 'surgery', 'anesthesia', 'emergency', 'critical care', 'Cardiologist',
+                    'icu', 'er', 'med/surg', 'pediatric', 'oncology', 'cardiology', 'Otolaryngologist'
                 ],
                 'Administration': [
                     'admin', 'administrative', 'coordinator', 'assistant', 'office',
                     'secretary', 'clerk', 'registration', 'receptionist', 'scheduler'
                 ],
                 'Information Technology': [
-                    'it', 'technology', 'software', 'tech', 'data', 'systems', 'network',
+                    'it', 'technology', 'software', 'data', 'systems', 'network',
                     'computer', 'analyst', 'developer', 'programmer'
                 ],
                 'Finance': ['finance', 'financial', 'accounting', 'accountant', 'billing', 'revenue'],
@@ -132,34 +113,17 @@ class DatabaseManager:
         return None
 
     def _map_office_location(self, office_location: str) -> Optional[int]:
-        """Map office location to office_location_id"""
-        if not office_location:
+        """Map office location string to office_location_id via canonical name lookup"""
+        canonical = normalize_work_location(office_location)
+        if not canonical:
             return None
-
-        office_location_lower = office_location.lower().replace('-', ' ')
-
         with self.conn.cursor() as cursor:
-            cursor.execute("SELECT id FROM officelocations WHERE LOWER(REPLACE(name, '-', ' ')) LIKE %s", (f"%{office_location_lower}%",))
+            cursor.execute("SELECT id FROM officelocations WHERE name = %s", (canonical,))
             result = cursor.fetchone()
             if result:
-                self.logger.info(f"  Mapped '{office_location}' to office location ID: {result['id']}")
+                self.logger.info(f"  Mapped '{office_location}' to office location: {canonical}")
                 return result['id']
-
-            location_mappings = {
-                'remote': ['remote', 'work from home', 'wfh'],
-                'hybrid': ['hybrid', 'flexible'],
-                'in office': ['onsite', 'on-site', 'in office', 'office']
-            }
-
-            for location_key, variations in location_mappings.items():
-                if any(var in office_location_lower for var in variations):
-                    cursor.execute("SELECT id FROM officelocations WHERE LOWER(name) LIKE %s", (f"%{location_key}%",))
-                    result = cursor.fetchone()
-                    if result:
-                        self.logger.info(f"  Mapped '{office_location}' to office location ID: {result['id']} via '{location_key}'")
-                        return result['id']
-
-        self.logger.warning(f"  Could not map '{office_location}' to any office location")
+        self.logger.warning(f"  Office location '{canonical}' not found in database")
         return None
 
     def update_company_scrape_completed(self, company_id: int):

@@ -46,7 +46,7 @@ def _mock_store_job_listing(cursor, job_data, company_id, source_job_board):
 
 _po.store_job_listing    = _mock_store_job_listing
 _po.check_existing_job_by_url = lambda cursor, url: None   # treat all jobs as new
-_po.mark_stale_jobs_closed    = lambda cursor, company_id: None  # no-op
+_po.mark_stale_jobs_closed    = lambda cursor, company_id, logger=None: None  # no-op
 
 
 # ── db_connection patches ───────────────────────────────────────────────────
