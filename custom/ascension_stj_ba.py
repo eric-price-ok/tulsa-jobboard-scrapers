@@ -77,10 +77,10 @@ class DatabaseManager:
 
         with self.conn.cursor() as cursor:
             function_keywords = {
-                'Healthcare Provider': [
+                'Healthcare': [
                     'nurse', 'rn', 'lpn', 'lvn', 'cna', 'physician', 'doctor', 'md', 'do',
                     'therapist', 'technician', 'tech', 'medical', 'clinical', 'healthcare',
-                    'pharmacy', 'pharmacist', 'respiratory', 'radiology', 'laboratory',
+                    'pharmacy', 'pharmacist', 'respiratory', 'radiology', 'laboratory', 'paramedic',
                     'surgical', 'surgery', 'anesthesia', 'emergency', 'critical care', 'Cardiologist',
                     'icu', 'er', 'med/surg', 'pediatric', 'oncology', 'cardiology', 'Otolaryngologist'
                 ],
