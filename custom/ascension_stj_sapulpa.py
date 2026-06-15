@@ -361,7 +361,7 @@ class SeleniumJobScraper:
 
 class AscensionStJohnScraper:
     """Ascension St. John Sapulpa job scraper"""
-    COMPANY_NAME = 'Ascension St. John Sapulpa'
+    COMPANY_NAME = 'Ascension St. John - Sapulpa'
 
     def __init__(self, db_manager: DatabaseManager):
         self.db = db_manager
