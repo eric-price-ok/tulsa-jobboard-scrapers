@@ -244,26 +244,11 @@ def get_or_create_company_site(cursor, company_id: int, location_name: str, city
             logger.info(f"Found existing company site: {shortname} (ID: {result['id']})")
         return result['id']
 
-    # Create new company site. The freetext city column was removed from companysite;
-    # use city_id (FK to cities table) only.
     cursor.execute("""
-        INSERT INTO companysite (
-            company_id, site_type, address1, address2, country_id,
-            state_id, phone, is_active, shortname, city_id
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO companysite (company_id, shortname, city_id, is_active)
+        VALUES (%s, %s, %s, %s)
         RETURNING id
-    """, (
-        company_id,
-        8,      # site_type
-        '',     # address1 (blank)
-        None,   # address2
-        1,      # country_id (US)
-        1,      # state_id (Oklahoma)
-        None,   # phone
-        True,   # is_active
-        shortname,
-        city_id,
-    ))
+    """, (company_id, shortname, city_id, True))
 
     result = cursor.fetchone()
     site_id = result['id']
