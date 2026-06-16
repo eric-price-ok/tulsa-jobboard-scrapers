@@ -258,27 +258,26 @@ class CNBJobScraper:
                 time.sleep(3)
 
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
+
+            # Search the full page for metadata spans — they live outside div.job-description-data
+            # on the ADP detail page (sidebar/header area). Class name typo is intentional.
+            job_type_span = soup.find('span', class_='job-description-worker-catergory')
+            if job_type_span:
+                result['job_type_raw'] = job_type_span.get_text(strip=True)
+
+            date_span = soup.find('span', class_='job-description-post-date')
+            if date_span:
+                result['date_posted'] = normalize_date_string(date_span.get_text(strip=True))
+
+            # Salary span also carries 'hydrated' from ADP's web components
+            salary_span = soup.find('span', class_='job-description-salary')
+            if salary_span:
+                result['salary_text'] = salary_span.get_text(strip=True)
+
             content = soup.find('div', class_='job-description-data')
             if not content:
                 self.logger.warning(f"  div.job-description-data not found for job {external_job_id}")
                 return result
-
-            # Extract metadata before cleaning; class name typo is intentional — matches ADP HTML
-            job_type_span = content.find('span', class_='job-description-worker-catergory')
-            if job_type_span:
-                result['job_type_raw'] = job_type_span.get_text(strip=True)
-                job_type_span.decompose()
-
-            date_span = content.find('span', class_='job-description-post-date')
-            if date_span:
-                result['date_posted'] = normalize_date_string(date_span.get_text(strip=True))
-                date_span.decompose()
-
-            # Salary span carries class 'job-description-salary' (and 'hydrated' from web components)
-            salary_span = content.find('span', class_='job-description-salary')
-            if salary_span:
-                result['salary_text'] = salary_span.get_text(strip=True)
-                salary_span.decompose()
 
             # Clean HTML: remove script/style, unwrap disallowed tags, strip all attributes
             for tag in content.find_all(['script', 'style', 'noscript']):
@@ -358,7 +357,6 @@ class CNBJobScraper:
                             'job_title': title,
                             'job_description': description,
                             'posting_url': job_url,
-                            'source_job_board': 'CNB ADP',
                             'date_posted': date_posted,
                             'scraping_hash': hashlib.md5(
                                 f"{title}{job_url}{description}".encode()

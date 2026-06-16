@@ -394,21 +394,21 @@ class BancFirstJobScraper:
                 time.sleep(3)
 
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
+
+            # Search the full page for metadata spans — they live outside div.job-description-data
+            # on the ADP detail page. Class name typo is intentional — matches ADP HTML.
+            job_type_span = soup.find('span', class_='job-description-worker-catergory')
+            if job_type_span:
+                result['job_type_raw'] = job_type_span.get_text(strip=True)
+
+            date_span = soup.find('span', class_='job-description-post-date')
+            if date_span:
+                result['date_posted'] = normalize_date_string(date_span.get_text(strip=True))
+
             content = soup.find('div', class_='job-description-data')
             if not content:
                 logger.warning(f"  div.job-description-data not found for job {external_job_id}")
                 return result
-
-            # Extract metadata before cleaning (class name typo is intentional — matches ADP HTML)
-            job_type_span = content.find('span', class_='job-description-worker-catergory')
-            if job_type_span:
-                result['job_type_raw'] = job_type_span.get_text(strip=True)
-                job_type_span.decompose()
-
-            date_span = content.find('span', class_='job-description-post-date')
-            if date_span:
-                result['date_posted'] = normalize_date_string(date_span.get_text(strip=True))
-                date_span.decompose()
 
             # Strip tags with unwanted content first
             for tag in content.find_all(['script', 'style', 'noscript']):
@@ -501,7 +501,6 @@ class BancFirstJobScraper:
                             'job_title': job['title'],
                             'job_description': description,
                             'posting_url': job_url,
-                            'source_job_board': 'BancFirst ADP',
                             'date_posted': date_posted,
                             'posting_id': job_api.get('posting_id'),
                             'external_job_id': external_job_id,
