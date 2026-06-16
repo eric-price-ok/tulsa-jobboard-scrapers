@@ -4,18 +4,20 @@ stfrancis-hosp-south-workday-api-selenium.py
 Saint Francis Hospital South — Workday API + Selenium scraper (Gen 2)
 
 The Saint Francis Workday instance is shared across multiple hiring companies.
-We scope to Hospital South via appliedFacets.hiringCompany. Location filtering
-uses match_location_to_city_id against the served cities table rather than
-hardcoded location IDs, since the hospital may post jobs across the metro.
+We scope to Hospital South via appliedFacets.hiringCompany.
+
+locationsText from the API is a company site name (e.g. "South Campus"), not a
+city. It is matched against companysite.shortname for this company; if not found
+a new site row is created for admin review. city_id comes from the matched site
+record (NULL for newly created sites until an admin sets it).
 """
 
 from utils.db_connection import get_database_connection, close_connection
 from utils.posting_operations import store_job_listing, check_existing_job_by_url, mark_stale_jobs_closed
-from utils.company_operations import get_or_create_company
+from utils.company_operations import get_or_create_company, get_or_create_company_site
 from utils.date_utilities import parse_relative_date
 from utils.selenium_config import SeleniumConfig
 from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
-from utils.location_utilities import match_location_to_city_id
 from typing import Tuple
 
 from selenium import webdriver
@@ -489,16 +491,25 @@ class SaintFrancisHospSouthScraper:
                 for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
-                        location_text = job.get('locationsText', '')
-                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title} | {location_text}")
+                        site_name = job.get('locationsText', '').strip()
+                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title} | site: {site_name}")
 
-                        # Filter to served cities; derive city_id from the job's location text
-                        city_name, city_id = match_location_to_city_id(cursor, location_text)
-                        if not city_id:
-                            logger.info(f"  Skipping — location not in served area: '{location_text}'")
-                            stats['skipped'] += 1
-                            continue
-                        logger.info(f"  Matched location '{location_text}' -> {city_name} (city_id: {city_id})")
+                        # Resolve company site — look up by shortname, create if new.
+                        # city_id comes from the existing site record; NULL for new sites
+                        # until an admin populates it.
+                        city_id = None
+                        if site_name:
+                            cursor.execute(
+                                "SELECT id, city_id FROM companysite WHERE company_id = %s AND shortname = %s",
+                                (company_id, site_name)
+                            )
+                            site_row = cursor.fetchone()
+                            if site_row:
+                                city_id = site_row['city_id']
+                                logger.info(f"  Found existing site '{site_name}' (city_id: {city_id})")
+                            else:
+                                get_or_create_company_site(cursor, company_id, site_name, city_id=None, logger=logger)
+                                logger.info(f"  Created new site '{site_name}' — city_id pending admin review")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
