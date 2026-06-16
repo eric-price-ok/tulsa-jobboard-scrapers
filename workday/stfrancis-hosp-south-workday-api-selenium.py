@@ -18,6 +18,7 @@ from utils.company_operations import get_or_create_company, get_or_create_compan
 from utils.date_utilities import parse_relative_date
 from utils.selenium_config import SeleniumConfig
 from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
+from utils.location_utilities import match_location_to_city_id
 from typing import Tuple
 
 from selenium import webdriver
@@ -376,6 +377,7 @@ class SaintFrancisHospSouthScraper:
                 'date_closed':        None,
                 'minimum_salary':     None,
                 'maximum_salary':     None,
+                'location_text':      None,
             }
             salary_found_in_dd = False
 
@@ -416,12 +418,23 @@ class SaintFrancisHospSouthScraper:
             except Exception as e:
                 logger.warning(f"  Could not extract detail page metadata: {e}")
 
+            page_text = soup.get_text(separator='\n')
+
             if not salary_found_in_dd:
-                page_text = soup.get_text()
                 min_sal, max_sal = _parse_salary_from_text(page_text)
                 if min_sal:
                     extracted_fields['minimum_salary'] = min_sal
                     extracted_fields['maximum_salary'] = max_sal
+
+            # Extract "Location: <text>" from description body.
+            # May be a city/state string or a site name; caller will try both.
+            try:
+                loc_match = re.search(r'Location\s*:\s*([^\n<]+)', page_text)
+                if loc_match:
+                    extracted_fields['location_text'] = loc_match.group(1).strip()
+                    logger.info(f"  Location text: '{extracted_fields['location_text']}'")
+            except Exception as e:
+                logger.warning(f"  Could not extract location text: {e}")
 
             for tag in soup.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
                 tag.decompose()
@@ -491,31 +504,8 @@ class SaintFrancisHospSouthScraper:
                 for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
-                        site_name = job.get('locationsText', '').strip()
-                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title} | site: {site_name}")
-
-                        # Resolve company site — look up by shortname, create if new.
-                        # city_id comes from the existing site record; NULL for new sites
-                        # until an admin populates it.
-                        city_id = None
-                        if site_name:
-                            cursor.execute(
-                                "SELECT id, city_id FROM companysite WHERE company_id = %s AND shortname = %s",
-                                (company_id, site_name)
-                            )
-                            site_row = cursor.fetchone()
-                            if site_row:
-                                city_id = site_row['city_id']
-                                logger.info(f"  Found existing site '{site_name}' (city_id: {city_id})")
-                            else:
-                                try:
-                                    cursor.execute("SAVEPOINT create_site")
-                                    get_or_create_company_site(cursor, company_id, site_name, city_id=None, logger=logger)
-                                    cursor.execute("RELEASE SAVEPOINT create_site")
-                                    logger.info(f"  Created new site '{site_name}' — city_id pending admin review")
-                                except Exception as site_err:
-                                    cursor.execute("ROLLBACK TO SAVEPOINT create_site")
-                                    logger.warning(f"  Could not create site '{site_name}': {site_err}")
+                        api_site_name = job.get('locationsText', '').strip()
+                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title} | site: {api_site_name}")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
@@ -540,6 +530,39 @@ class SaintFrancisHospSouthScraper:
                             logger.warning("  Failed to get meaningful job content, skipping")
                             stats['skipped'] += 1
                             continue
+
+                        # Primary city source: match the "Location:" text from the description.
+                        # This works for "Tulsa, Oklahoma, 74133" style values; falls through
+                        # for site-name-only values like "South Campus - Hospital".
+                        location_text = extracted_fields.get('location_text', '') or api_site_name
+                        city_name, city_id = match_location_to_city_id(cursor, location_text)
+                        if city_id:
+                            logger.info(f"  City from description location '{location_text}': {city_name} (city_id: {city_id})")
+
+                        # Secondary: look up companysite by API locationsText.
+                        # If the site record has a city_id and we didn't resolve one above, use it.
+                        # If the site is new, create it — passing any city_id already resolved.
+                        site_name = api_site_name or location_text
+                        if site_name:
+                            cursor.execute(
+                                "SELECT id, city_id FROM companysite WHERE company_id = %s AND shortname = %s",
+                                (company_id, site_name)
+                            )
+                            site_row = cursor.fetchone()
+                            if site_row:
+                                logger.info(f"  Found existing site '{site_name}' (site city_id: {site_row['city_id']})")
+                                if not city_id and site_row['city_id']:
+                                    city_id = site_row['city_id']
+                                    logger.info(f"  Using city_id {city_id} from companysite record")
+                            else:
+                                logger.info(f"  New site '{site_name}' — creating")
+                                try:
+                                    cursor.execute("SAVEPOINT create_site")
+                                    get_or_create_company_site(cursor, company_id, site_name, city_id=city_id, logger=logger)
+                                    cursor.execute("RELEASE SAVEPOINT create_site")
+                                except Exception as site_err:
+                                    cursor.execute("ROLLBACK TO SAVEPOINT create_site")
+                                    logger.warning(f"  Could not create site '{site_name}': {site_err}")
 
                         job_data = {
                             'job_title': title,
