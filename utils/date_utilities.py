@@ -33,13 +33,25 @@ def parse_relative_date(posted_text: str) -> Optional[datetime]:
         return None
     
     try:
+        # Handle "N+ days ago" explicitly — treat the floor number as the exact day count
+        plus_match = re.match(
+            r'^(?:Posted\s+)?(\d+)\+\s*days?\s+ago$',
+            posted_text.strip(),
+            re.IGNORECASE
+        )
+        if plus_match:
+            days = int(plus_match.group(1))
+            result_date = datetime.now() - timedelta(days=days)
+            logger.debug(f"Parsed '{posted_text}' as {days}+ days ago -> {result_date.strftime('%Y-%m-%d')}")
+            return result_date
+
         # Clean the text - remove "Posted" prefix
         clean_text = re.sub(r'^Posted\s+', '', posted_text.strip(), flags=re.IGNORECASE)
-        
+
         # Remove various "ago" suffixes
         clean_text = re.sub(r'\s*\+?\s*Days?\s+Ago$', '', clean_text, flags=re.IGNORECASE)
         clean_text = re.sub(r'\s*\+?\s*Day\s+Ago$', '', clean_text, flags=re.IGNORECASE)
-        
+
         # Extract the number (handle "1+" format)
         clean_text = re.sub(r'\+', '', clean_text)
         

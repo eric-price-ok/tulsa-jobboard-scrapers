@@ -27,6 +27,10 @@ from utils.company_operations import get_or_create_company
 from utils.utility_methods import normalize_job_type
 from utils.selenium_config import SeleniumConfig
 from utils.location_utilities import find_served_city, get_city_id
+from utils.date_utilities import normalize_date_string
+
+# HTML tags preserved in cleaned job descriptions
+_ALLOWED_TAGS = {'b', 'strong', 'i', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'br'}
 
 logging.basicConfig(
     level=logging.INFO,
@@ -372,38 +376,64 @@ class BancFirstJobScraper:
             f"&jobId={external_job_id}"
         )
 
-    def scrape_job_description(self, external_job_id: str) -> str:
-        """Scrape individual job description page"""
+    def scrape_job_description(self, external_job_id: str) -> Dict:
+        """
+        Scrape job detail page.
+        Returns dict with 'description' (cleaned HTML), 'job_type_raw', and 'date_posted'.
+        """
         job_url = self.build_job_url(external_job_id)
+        result = {'description': '', 'job_type_raw': '', 'date_posted': None}
         try:
             self.driver.get(job_url)
-            time.sleep(2)
+
+            try:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, 'div.job-description-data'))
+                )
+            except TimeoutException:
+                time.sleep(3)
 
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
-            body = soup.find('body')
-            if not body:
-                return ""
+            content = soup.find('div', class_='job-description-data')
+            if not content:
+                logger.warning(f"  div.job-description-data not found for job {external_job_id}")
+                return result
 
-            for tag in body.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
+            # Extract metadata before cleaning (class name typo is intentional — matches ADP HTML)
+            job_type_span = content.find('span', class_='job-description-worker-catergory')
+            if job_type_span:
+                result['job_type_raw'] = job_type_span.get_text(strip=True)
+                job_type_span.decompose()
+
+            date_span = content.find('span', class_='job-description-post-date')
+            if date_span:
+                result['date_posted'] = normalize_date_string(date_span.get_text(strip=True))
+                date_span.decompose()
+
+            # Strip tags with unwanted content first
+            for tag in content.find_all(['script', 'style', 'noscript']):
                 tag.decompose()
 
-            for br in body.find_all('br'):
-                br.replace_with('\n')
+            # Unwrap disallowed tags — preserves their text content
+            for tag in content.find_all(True):
+                if tag.name not in _ALLOWED_TAGS:
+                    tag.unwrap()
 
-            description = body.get_text(separator='\n', strip=True)
+            # Remove all attributes from remaining tags
+            for tag in content.find_all(True):
+                tag.attrs = {}
 
-            copyright_idx = description.lower().find('copyright')
-            if copyright_idx != -1:
-                description = description[:copyright_idx]
-
-            description = re.sub(r'\n{3,}', '\n\n', description).strip()
-
-            logger.info(f"  Extracted description: {len(description)} chars")
-            return description
+            result['description'] = content.decode_contents()
+            logger.info(
+                f"  Extracted description: {len(result['description'])} chars"
+                f" | type: {result['job_type_raw']!r}"
+                f" | date: {result['date_posted']}"
+            )
+            return result
 
         except Exception as e:
             logger.warning(f"Error scraping job description: {e}")
-            return ""
+            return result
 
     def scrape_jobs(self) -> Dict:
         """Main scraping method"""
@@ -453,7 +483,8 @@ class BancFirstJobScraper:
                             stats['updated'] += 1
                             continue
 
-                        description = self.scrape_job_description(external_job_id)
+                        job_detail = self.scrape_job_description(external_job_id)
+                        description = job_detail['description']
                         if not description or len(description.strip()) < 50:
                             logger.warning("  Insufficient job description, skipping")
                             stats['skipped'] += 1
@@ -462,12 +493,16 @@ class BancFirstJobScraper:
                         job_api = api_data.get(external_job_id, {})
                         city_id = get_city_id(cursor, find_served_city(job.get('location', '')))
 
+                        date_posted = job_detail['date_posted']
+                        if date_posted and hasattr(date_posted, 'date'):
+                            date_posted = date_posted.date()
+
                         job_data = {
                             'job_title': job['title'],
                             'job_description': description,
                             'posting_url': job_url,
                             'source_job_board': 'BancFirst ADP',
-                            'date_posted': job_api.get('date_posted'),
+                            'date_posted': date_posted,
                             'posting_id': job_api.get('posting_id'),
                             'external_job_id': external_job_id,
                             'minimum_salary': job_api.get('minimum_salary'),
@@ -476,7 +511,7 @@ class BancFirstJobScraper:
                                 f"{job['title']}{job_url}{description}".encode()
                             ).hexdigest(),
                             'function': _map_job_to_function(cursor, job['title']),
-                            'job_type_id': _map_job_type(cursor, job_api.get('work_level', '')),
+                            'job_type_id': _map_job_type(cursor, job_detail['job_type_raw']),
                             'city_id': city_id,
                         }
 
