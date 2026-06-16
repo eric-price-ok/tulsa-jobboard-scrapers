@@ -31,6 +31,7 @@ _captured_jobs = []
 
 import utils.posting_operations as _po
 import utils.db_connection as _dbc
+import utils.company_operations as _co
 
 
 # ── posting_operations patches ─────────────────────────────────────────────
@@ -44,9 +45,16 @@ def _mock_store_job_listing(cursor, job_data, company_id, source_job_board):
     print(f"  [DRY RUN] Captured: {entry.get('job_title', '?')} (would be id={fake_id})")
     return fake_id
 
-_po.store_job_listing    = _mock_store_job_listing
-_po.check_existing_job_by_url = lambda cursor, url: None   # treat all jobs as new
+_po.store_job_listing         = _mock_store_job_listing
+_po.check_existing_job_by_url = lambda cursor, url: None          # treat all jobs as new
 _po.mark_stale_jobs_closed    = lambda cursor, company_id, logger=None: None  # no-op
+
+# ── company_operations patches ─────────────────────────────────────────────
+# get_or_create_company_site does an INSERT that is not a job listing write,
+# so it isn't covered by the posting_operations patch above. Mock it so it
+# doesn't execute any SQL and can't abort the transaction.
+
+_co.get_or_create_company_site = lambda cursor, company_id, location_name, city_id=None, logger=None: None
 
 
 # ── db_connection patches ───────────────────────────────────────────────────

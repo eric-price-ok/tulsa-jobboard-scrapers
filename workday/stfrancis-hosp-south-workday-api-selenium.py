@@ -508,8 +508,14 @@ class SaintFrancisHospSouthScraper:
                                 city_id = site_row['city_id']
                                 logger.info(f"  Found existing site '{site_name}' (city_id: {city_id})")
                             else:
-                                get_or_create_company_site(cursor, company_id, site_name, city_id=None, logger=logger)
-                                logger.info(f"  Created new site '{site_name}' — city_id pending admin review")
+                                try:
+                                    cursor.execute("SAVEPOINT create_site")
+                                    get_or_create_company_site(cursor, company_id, site_name, city_id=None, logger=logger)
+                                    cursor.execute("RELEASE SAVEPOINT create_site")
+                                    logger.info(f"  Created new site '{site_name}' — city_id pending admin review")
+                                except Exception as site_err:
+                                    cursor.execute("ROLLBACK TO SAVEPOINT create_site")
+                                    logger.warning(f"  Could not create site '{site_name}': {site_err}")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
