@@ -557,11 +557,8 @@ class SaintFrancisHospSouthScraper:
                             else:
                                 logger.info(f"  New site '{site_name}' — creating")
                                 try:
-                                    cursor.execute("SAVEPOINT create_site")
                                     get_or_create_company_site(cursor, company_id, site_name, city_id=city_id, logger=logger)
-                                    cursor.execute("RELEASE SAVEPOINT create_site")
                                 except Exception as site_err:
-                                    cursor.execute("ROLLBACK TO SAVEPOINT create_site")
                                     logger.warning(f"  Could not create site '{site_name}': {site_err}")
 
                         job_data = {
