@@ -515,7 +515,7 @@ class BancFirstJobScraper:
                             'city_id': city_id,
                         }
 
-                        job_id = store_job_listing(cursor, job_data, company_id)
+                        job_id = store_job_listing(cursor, job_data, company_id, 'BancFirst ADP')
                         logger.info(f"  ✓ Stored job with ID: {job_id}")
                         stats['added'] += 1
                         time.sleep(1.0)

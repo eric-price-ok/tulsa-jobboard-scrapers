@@ -372,7 +372,7 @@ class CNBJobScraper:
                             'city_id': job.get('_city_id'),
                         }
 
-                        job_id = store_job_listing(cursor, job_data, self.company_id)
+                        job_id = store_job_listing(cursor, job_data, self.company_id, 'CNB ADP')
                         self.logger.info(f"  ✓ Stored job ID: {job_id}")
                         stats['added'] += 1
                         time.sleep(1.0)
