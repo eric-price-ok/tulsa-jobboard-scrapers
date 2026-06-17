@@ -115,9 +115,12 @@ python workday/<new-filename>.py
 |---|---|---|---|
 | Saint Francis Hospital South | `stfrancis-hosp-south-workday-api-selenium.py` | `0799604f508e1000cec34d97003e0000` | `SFHB Workday` |
 | Laureate Psychiatric Clinic | `sfh-laureate-workday-api-selenium.py` | `36d103f122b61000ce0e569e15510000` | `St Francis Laureate Workday` |
+| Warren Clinic | `sfh-warren-clinic-workday-api-selenium.py` | resolved from jobboard URL | `Workday Warren Clinic` |
 
 Add rows to this table as new scrapers are created.
 
 ## Note on DB-resolved vs. hardcoded config
 
-The Laureate scraper (`sfh-laureate-workday-api-selenium.py`) uses a slightly different pattern from Hospital South: it resolves `jobboard` URL and `company_type_name` from the `company` table at runtime rather than hardcoding them. The company record must exist in the DB with its `jobboard` field set to the correct URL (including `hiringCompany` param) before the scraper runs. If you copy this scraper for a new entity, make sure the company record is created first.
+The Laureate and Warren Clinic scrapers resolve `jobboard` URL, `company_type_name`, and `hiring_company_id` from the `company` table at runtime rather than hardcoding them. The `hiring_company_id` is parsed from the `hiringCompany` query parameter in the stored `jobboard` URL — no value needs to be hardcoded in the script. The company record must exist in the DB with its `jobboard` field set to the correct URL (including `?hiringCompany=<id>`) before the scraper runs.
+
+Warren Clinic additionally filters jobs by served city: the description body is searched for a `Location:` line and matched against the served cities table. Jobs with no recognizable served city are skipped entirely. This is appropriate for employers with locations across multiple cities; single-site employers (Hospital South, Laureate) do not need this filter.
