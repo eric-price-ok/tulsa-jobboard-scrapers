@@ -531,35 +531,38 @@ class SaintFrancisHospSouthScraper:
                             stats['skipped'] += 1
                             continue
 
-                        # Primary city source: match the "Location:" text from the description.
-                        # This works for "Tulsa, Oklahoma, 74133" style values; falls through
-                        # for site-name-only values like "South Campus - Hospital".
-                        location_text = extracted_fields.get('location_text', '') or api_site_name
-                        city_name, city_id = match_location_to_city_id(cursor, location_text)
+                        # City resolution — two independent sources, never conflated with site name.
+                        # 1. Try the "Location:" text extracted from the description body.
+                        desc_location = extracted_fields.get('location_text', '')
+                        city_name, city_id = match_location_to_city_id(cursor, desc_location) if desc_location else (None, None)
                         if city_id:
-                            logger.info(f"  City from description location '{location_text}': {city_name} (city_id: {city_id})")
+                            logger.info(f"  City from description '{desc_location}': {city_name} (city_id: {city_id})")
+                        else:
+                            logger.info(f"  No city match from description location: '{desc_location}'")
 
-                        # Secondary: look up companysite by API locationsText.
-                        # If the site record has a city_id and we didn't resolve one above, use it.
-                        # If the site is new, create it — passing any city_id already resolved.
-                        site_name = api_site_name or location_text
-                        if site_name:
+                        # Site resolution — uses api_site_name (locationsText) exclusively as
+                        # shortname. Never falls back to the city string from the description,
+                        # which would create or fail to match sites under wrong names.
+                        if api_site_name:
+                            logger.info(f"  Looking up companysite: company_id={company_id} shortname='{api_site_name}'")
                             cursor.execute(
                                 "SELECT id, city_id FROM companysite WHERE company_id = %s AND shortname = %s",
-                                (company_id, site_name)
+                                (company_id, api_site_name)
                             )
                             site_row = cursor.fetchone()
                             if site_row:
-                                logger.info(f"  Found existing site '{site_name}' (site city_id: {site_row['city_id']})")
+                                logger.info(f"  Found existing site '{api_site_name}' (site city_id: {site_row['city_id']})")
                                 if not city_id and site_row['city_id']:
                                     city_id = site_row['city_id']
                                     logger.info(f"  Using city_id {city_id} from companysite record")
                             else:
-                                logger.info(f"  New site '{site_name}' — creating")
+                                logger.info(f"  No existing site found for '{api_site_name}' under company_id={company_id} — creating")
                                 try:
-                                    get_or_create_company_site(cursor, company_id, site_name, city_id=city_id, logger=logger)
+                                    get_or_create_company_site(cursor, company_id, api_site_name, city_id=city_id, logger=logger)
                                 except Exception as site_err:
-                                    logger.warning(f"  Could not create site '{site_name}': {site_err}")
+                                    logger.warning(f"  Could not create site '{api_site_name}': {site_err}")
+                        else:
+                            logger.warning("  locationsText is empty — no site record created or looked up")
 
                         job_data = {
                             'job_title': title,
