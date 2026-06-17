@@ -114,6 +114,7 @@ python workday/<new-filename>.py
 | Entity | Scraper file | hiring_company_id | source_job_board |
 |---|---|---|---|
 | Saint Francis Hospital South | `stfrancis-hosp-south-workday-api-selenium.py` | `0799604f508e1000cec34d97003e0000` | `SFHB Workday` |
+| Saint Francis Hospital | `sfh-main-workday-api-selenium.py` | `0799604f508e1000cec32edbb18b0000` | `Workday Saint Francis Hospital` |
 | Laureate Psychiatric Clinic | `sfh-laureate-workday-api-selenium.py` | `36d103f122b61000ce0e569e15510000` | `St Francis Laureate Workday` |
 | Warren Clinic | `sfh-warren-clinic-workday-api-selenium.py` | resolved from jobboard URL | `Workday Warren Clinic` |
 | Saint Francis Glenpool | `sfh-glenpool-workday-api-selenium.py` | n/a — uses `?q=glenpool` search | `Workday SFH Glenpool` |
