@@ -37,6 +37,10 @@ import requests
 
 logger = setup_logging('Workday Saint Francis Hospital')
 
+# Cap Selenium detail-page fetches per run so the first run (300+ jobs) doesn't
+# hammer the site. Existing jobs are still updated without counting toward this cap.
+MAX_NEW_JOBS = 50
+
 _SALARY_PATTERNS = [
     (r'\$?([\d,]+\.?\d*)\s*-\s*\$?([\d,]+\.?\d*)\s*(?:USD|per\s+year|annually|/year)', False),
     (r'\$?([\d,]+\.?\d*)\s*-\s*\$?([\d,]+\.?\d*)\s*(?:/hour|per\s+hour|hourly)',        True),
@@ -496,7 +500,8 @@ class SaintFrancisHospitalScraper:
                 logger.info(f"  Retrieved {len(all_jobs)} jobs from API")
                 stats['found'] = len(all_jobs)
 
-                logger.info(f"Step 5: Processing {len(all_jobs)} jobs...")
+                logger.info(f"Step 5: Processing {len(all_jobs)} jobs (new job cap: {MAX_NEW_JOBS})...")
+                new_jobs_added = 0
                 for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
@@ -516,6 +521,11 @@ class SaintFrancisHospitalScraper:
                         if existing_job_id:
                             logger.info(f"  Existing job (ID: {existing_job_id}) — timestamps updated")
                             stats['updated'] += 1
+                            continue
+
+                        if new_jobs_added >= MAX_NEW_JOBS:
+                            logger.info(f"  New job cap ({MAX_NEW_JOBS}) reached — skipping remaining new jobs")
+                            stats['skipped'] += 1
                             continue
 
                         logger.info("  New job — loading detail page...")
@@ -578,6 +588,7 @@ class SaintFrancisHospitalScraper:
                                                    self.company_config['source_job_board'])
                         logger.info(f"  Stored job with ID: {job_id}")
                         stats['added'] += 1
+                        new_jobs_added += 1
 
                         time.sleep(0.5)
 
