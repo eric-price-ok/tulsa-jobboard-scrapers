@@ -126,7 +126,7 @@ def normalize_job_type(value: str) -> Optional[str]:
         'Contract-to-hire': ['contract to hire', 'contract-to-hire', 'c2h'],
         'Temporary':        ['temporary', 'temp'],
         'Internship':       ['intern', 'internship'],
-        'As Needed':        ['as needed', 'prn'],
+        'As Needed':        ['as needed', 'prn', 'ecb'],
     }
 
     for canonical, variants in mappings.items():
