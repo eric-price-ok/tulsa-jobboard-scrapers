@@ -114,5 +114,10 @@ python workday/<new-filename>.py
 | Entity | Scraper file | hiring_company_id | source_job_board |
 |---|---|---|---|
 | Saint Francis Hospital South | `stfrancis-hosp-south-workday-api-selenium.py` | `0799604f508e1000cec34d97003e0000` | `SFHB Workday` |
+| Laureate Psychiatric Clinic | `sfh-laureate-workday-api-selenium.py` | `36d103f122b61000ce0e569e15510000` | `St Francis Laureate Workday` |
 
 Add rows to this table as new scrapers are created.
+
+## Note on DB-resolved vs. hardcoded config
+
+The Laureate scraper (`sfh-laureate-workday-api-selenium.py`) uses a slightly different pattern from Hospital South: it resolves `jobboard` URL and `company_type_name` from the `company` table at runtime rather than hardcoding them. The company record must exist in the DB with its `jobboard` field set to the correct URL (including `hiringCompany` param) before the scraper runs. If you copy this scraper for a new entity, make sure the company record is created first.
