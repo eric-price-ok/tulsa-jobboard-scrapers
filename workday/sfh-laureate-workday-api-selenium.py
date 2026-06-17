@@ -574,7 +574,7 @@ class LaureateScraper:
                         if api_site_name:
                             logger.info(f"  Looking up companysite: company_id={company_id} shortname='{api_site_name}'")
                             cursor.execute(
-                                "SELECT id, city_id FROM companysite WHERE company_id = %s AND LOWER(shortname) = LOWER(%s)",
+                                "SELECT id, city_id FROM companysite WHERE company_id = %s AND LOWER(site_name) = LOWER(%s)",
                                 (company_id, api_site_name)
                             )
                             site_row = cursor.fetchone()

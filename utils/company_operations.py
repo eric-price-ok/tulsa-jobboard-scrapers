@@ -226,32 +226,31 @@ def get_company_config_by_name(cursor, company_name: str) -> Optional[Dict]:
 
 
 def get_or_create_company_site(cursor, company_id: int, location_name: str, city_id: int = None, logger=None) -> int:
-    """Get existing company site by shortname or create new one, return site ID"""
+    """Get existing company site by site_name or create new one, return site ID"""
     if not location_name or not location_name.strip():
         return None
 
-    shortname = location_name.strip()
+    site_name = location_name.strip()
 
-    # Check if company site exists by shortname and company_id
     cursor.execute(
-        "SELECT id FROM companysite WHERE company_id = %s AND shortname = %s",
-        (company_id, shortname)
+        "SELECT id FROM companysite WHERE company_id = %s AND LOWER(site_name) = LOWER(%s)",
+        (company_id, site_name)
     )
     result = cursor.fetchone()
 
     if result:
         if logger:
-            logger.info(f"Found existing company site: {shortname} (ID: {result['id']})")
+            logger.info(f"Found existing company site: {site_name} (ID: {result['id']})")
         return result['id']
 
     cursor.execute("""
-        INSERT INTO companysite (company_id, shortname, city_id, is_active)
+        INSERT INTO companysite (company_id, site_name, city_id, is_active)
         VALUES (%s, %s, %s, %s)
         RETURNING id
-    """, (company_id, shortname, city_id, True))
+    """, (company_id, site_name, city_id, True))
 
     result = cursor.fetchone()
     site_id = result['id']
     if logger:
-        logger.info(f"Created new company site: {shortname} (ID: {site_id})")
+        logger.info(f"Created new company site: {site_name} (ID: {site_id})")
     return site_id
