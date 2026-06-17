@@ -116,11 +116,12 @@ python workday/<new-filename>.py
 | Saint Francis Hospital South | `stfrancis-hosp-south-workday-api-selenium.py` | `0799604f508e1000cec34d97003e0000` | `SFHB Workday` |
 | Laureate Psychiatric Clinic | `sfh-laureate-workday-api-selenium.py` | `36d103f122b61000ce0e569e15510000` | `St Francis Laureate Workday` |
 | Warren Clinic | `sfh-warren-clinic-workday-api-selenium.py` | resolved from jobboard URL | `Workday Warren Clinic` |
+| Saint Francis Glenpool | `sfh-glenpool-workday-api-selenium.py` | n/a — uses `?q=glenpool` search | `Workday SFH Glenpool` |
 
 Add rows to this table as new scrapers are created.
 
 ## Note on DB-resolved vs. hardcoded config
 
-The Laureate and Warren Clinic scrapers resolve `jobboard` URL, `company_type_name`, and `hiring_company_id` from the `company` table at runtime rather than hardcoding them. The `hiring_company_id` is parsed from the `hiringCompany` query parameter in the stored `jobboard` URL — no value needs to be hardcoded in the script. The company record must exist in the DB with its `jobboard` field set to the correct URL (including `?hiringCompany=<id>`) before the scraper runs.
+The Laureate, Warren Clinic, and Glenpool scrapers resolve `jobboard` URL and `company_type_name` from the `company` table at runtime. `hiring_company_id` is parsed from the `hiringCompany` query parameter if present. The Glenpool scraper supports a second URL pattern (`?q=<term>`) where no `hiringCompany` ID exists — it switches to keyword search mode automatically. The company record must exist with its `jobboard` field set before running.
 
 Warren Clinic additionally filters jobs by served city: the description body is searched for a `Location:` line and matched against the served cities table. Jobs with no recognizable served city are skipped entirely. This is appropriate for employers with locations across multiple cities; single-site employers (Hospital South, Laureate) do not need this filter.
