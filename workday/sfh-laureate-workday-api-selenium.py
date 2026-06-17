@@ -149,10 +149,10 @@ def _map_job_to_function(cursor, job_title: str) -> Optional[int]:
                 if result:
                     logger.info(f"  Mapped '{job_title}' to function: {function_name}")
                     return result['id']
-    cursor.execute("SELECT id FROM functions WHERE name = %s", ('Other',))
+    cursor.execute("SELECT id FROM functions WHERE name = %s", ('Healthcare',))
     result = cursor.fetchone()
     if result:
-        logger.info(f"  Mapped '{job_title}' to function: Other (no specific match)")
+        logger.info(f"  Mapped '{job_title}' to function: Healthcare (default)")
         return result['id']
     logger.warning(f"  Could not map '{job_title}' to any function")
     return None
