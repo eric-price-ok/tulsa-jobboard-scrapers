@@ -535,8 +535,8 @@ class LaureateScraper:
                 for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
-                        api_site_name = job.get('locationsText', '').strip()
-                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title} | site: {api_site_name}")
+                        api_site_name = (job.get('locationsText') or '').strip()
+                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title} | site: '{api_site_name}'")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
@@ -574,7 +574,7 @@ class LaureateScraper:
                         if api_site_name:
                             logger.info(f"  Looking up companysite: company_id={company_id} shortname='{api_site_name}'")
                             cursor.execute(
-                                "SELECT id, city_id FROM companysite WHERE company_id = %s AND shortname = %s",
+                                "SELECT id, city_id FROM companysite WHERE company_id = %s AND LOWER(shortname) = LOWER(%s)",
                                 (company_id, api_site_name)
                             )
                             site_row = cursor.fetchone()
