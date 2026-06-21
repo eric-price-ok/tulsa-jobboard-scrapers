@@ -380,7 +380,6 @@ class MeltonUltiProScraper:
                             'posting_id': job_metadata.get('posting_id'),
                             'job_description': description,
                             'date_posted': job_metadata.get('date_posted'),
-                            'source_job_board': 'Melton UltiPro',
                             'scraping_hash': hashlib.md5(
                                 f"{job_metadata['job_title']}{job_metadata['posting_url']}{description}".encode()
                             ).hexdigest(),
@@ -392,7 +391,7 @@ class MeltonUltiProScraper:
                             'city_id': city_id,
                         }
 
-                        job_id = store_job_listing(cursor, job_data, company_id)
+                        job_id = store_job_listing(cursor, job_data, company_id, 'Melton UltiPro')
                         logger.info(f"  Stored job with ID: {job_id}")
                         stats['added'] += 1
                         time.sleep(1.0)
