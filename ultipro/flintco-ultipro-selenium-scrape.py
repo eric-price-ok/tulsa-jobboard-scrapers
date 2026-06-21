@@ -397,7 +397,6 @@ class FlintcoUltiProScraper:
                             'posting_id': job_metadata.get('posting_id'),
                             'job_description': description,
                             'date_posted': job_metadata.get('date_posted'),
-                            'source_job_board': 'Flintco Ultipro Scraper',
                             'scraping_hash': hashlib.md5(
                                 f"{job_metadata['job_title']}{job_metadata['posting_url']}{description}".encode()
                             ).hexdigest(),
@@ -409,7 +408,7 @@ class FlintcoUltiProScraper:
                             'city_id': city_id,
                         }
 
-                        job_id = store_job_listing(cursor, job_data, company_id)
+                        job_id = store_job_listing(cursor, job_data, company_id, 'Flintco Ultipro')
                         logger.info(f"  Stored job with ID: {job_id}")
                         stats['added'] += 1
                         time.sleep(1.0)
@@ -430,7 +429,7 @@ class FlintcoUltiProScraper:
 
                 # Step 7: Log results
                 logger.info("Step 7: Logging results...")
-                _log_scraping_activity(cursor, 'Flintco Ultipro Scraper', company_id, stats)
+                _log_scraping_activity(cursor, 'Flintco Ultipro', company_id, stats)
 
         except Exception as e:
             error_msg = f"Scraping failed: {e}"
