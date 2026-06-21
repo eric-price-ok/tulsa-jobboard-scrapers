@@ -21,7 +21,7 @@ from typing import Dict, List, Optional
 
 from utils.db_connection import get_database_connection, close_connection
 from utils.posting_operations import check_existing_job_by_url, store_job_listing, mark_stale_jobs_closed
-from utils.company_operations import get_company_config_by_name
+from utils.company_operations import get_company_config_by_name, get_or_create_company_site
 from utils.selenium_config import SeleniumConfig
 from utils.date_utilities import normalize_date_string
 from utils.location_utilities import get_city_id
@@ -213,6 +213,9 @@ class CowetaJobScraper:
                 elif 'Position Type' in label_text and 'position_type' not in job_data:
                     job_data['position_type'] = value_text
                     logger.info(f"  Position Type: {value_text}")
+                elif 'Location' in label_text and 'location' not in job_data:
+                    job_data['location'] = value_text
+                    logger.info(f"  Location: {value_text}")
 
         except Exception as e:
             logger.error(f"Error extracting job data: {e}")
@@ -300,6 +303,12 @@ class CowetaJobScraper:
                                 f"— see original posting for details."
                             )
 
+                        company_site_id = None
+                        if job_data.get('location'):
+                            company_site_id = get_or_create_company_site(
+                                cursor, company_id, job_data['location']
+                            )
+
                         store_data = {
                             'job_title': job_data['job_title'],
                             'posting_url': job_data['posting_url'],
@@ -311,6 +320,7 @@ class CowetaJobScraper:
                             ).hexdigest(),
                             'function': _map_job_to_function(cursor, job_data.get('position_type', '')),
                             'city_id': city_id,
+                            'company_site_id': company_site_id,
                         }
 
                         job_id = store_job_listing(cursor, store_data, company_id, 'Coweta Applitrack')
