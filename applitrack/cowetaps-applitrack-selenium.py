@@ -2,7 +2,7 @@
 """
 cowetaps-applitrack-selenium.py
 Coweta Public Schools Applitrack Job Board Scraper
-Selenium-based extraction with inline job descriptions (WordSection1)
+Selenium-based extraction with inline job descriptions (JS toggle div)
 """
 
 from selenium import webdriver
@@ -219,18 +219,23 @@ class CowetaJobScraper:
 
         return job_data
 
-    def get_job_description_from_wordsection(self, job_element) -> str:
+    def get_job_description_inline(self, job_element) -> str:
+        """Extract description from the hidden toggle div (DescriptionText{id}_ pattern)"""
         try:
-            wordsection_div = job_element.find('div', class_='WordSection1')
-            if wordsection_div:
-                text = wordsection_div.get_text(strip=True)
-                if len(text) > 50:
-                    logger.info(f"  Extracted description from WordSection1: {len(text)} chars")
-                    return text
-            logger.warning("  No WordSection1 found or content too short")
+            for link in job_element.find_all('a', href=True):
+                match = re.search(r"toggle_block\('([^']+)'\)", link.get('href', ''))
+                if match:
+                    div_id = match.group(1)
+                    desc_div = job_element.find(id=div_id)
+                    if desc_div:
+                        text = desc_div.get_text(strip=True)
+                        if len(text) > 50:
+                            logger.info(f"  Extracted description from #{div_id}: {len(text)} chars")
+                            return text
+            logger.warning("  No toggle_block description div found")
             return ""
         except Exception as e:
-            logger.error(f"  Error extracting WordSection1: {e}")
+            logger.error(f"  Error extracting inline description: {e}")
             return ""
 
     def scrape_jobs(self) -> Dict:
@@ -288,7 +293,7 @@ class CowetaJobScraper:
                             stats['updated'] += 1
                             continue
 
-                        job_description = self.get_job_description_from_wordsection(job_element)
+                        job_description = self.get_job_description_inline(job_element)
                         if not job_description:
                             job_description = (
                                 f"Job posting for {job_data.get('job_title', 'position')} "
