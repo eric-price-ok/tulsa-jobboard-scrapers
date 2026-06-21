@@ -181,6 +181,8 @@ class SeleniumJobScraper:
         """Initialize Chrome WebDriver"""
         try:
             chrome_options = SeleniumConfig.get_chrome_options(self.headless)
+            # recruiting2.ultipro.com detail pages need full load to pass browser checks
+            chrome_options.page_load_strategy = 'normal'
             self.driver = webdriver.Chrome(
                 service=Service(ChromeDriverManager().install()),
                 options=chrome_options
@@ -190,6 +192,15 @@ class SeleniumJobScraper:
         except Exception as e:
             logger.error(f"Failed to initialize WebDriver: {e}")
             raise
+
+    def _hide_webdriver(self):
+        """Re-inject anti-detection script — page navigation can reset navigator.webdriver"""
+        try:
+            self.driver.execute_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
+        except Exception:
+            pass
 
     def get_job_listings(self, job_board_url: str) -> List[Dict]:
         """Load job board and extract all job listings using data-automation selectors"""
@@ -280,10 +291,12 @@ class SeleniumJobScraper:
         try:
             logger.info(f"  Loading job page: {job_url}")
             self.driver.get(job_url)
+            # Re-hide webdriver property — page navigation resets it on recruiting2
+            self._hide_webdriver()
 
-            wait = WebDriverWait(self.driver, 12)
+            wait = WebDriverWait(self.driver, 20)
             wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-            time.sleep(1.5)
+            time.sleep(3)
 
             soup = BeautifulSoup(self.driver.page_source, 'html.parser')
 
@@ -304,6 +317,10 @@ class SeleniumJobScraper:
                 description = description[:copyright_idx]
 
             description = re.sub(r'\n{3,}', '\n\n', description).strip()
+
+            if 'unsupported browser' in description.lower():
+                logger.warning("  Bot detection triggered — 'unsupported browser' page returned")
+                return ""
 
             logger.info(f"  Extracted description: {len(description)} chars")
             return description
