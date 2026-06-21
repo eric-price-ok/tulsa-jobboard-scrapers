@@ -3,6 +3,15 @@
 flintco-ultipro-selenium-scrape.py
 Flintco UltiPro Job Board Scraper
 Selenium-based extraction using data-automation selectors
+
+NOTE (2026-06-21): This scraper is BROKEN due to bot detection on recruiting2.ultipro.com.
+Flintco's job board (recruiting2) returns "unsupported browser / not found" on detail pages
+even with full anti-detection measures applied (navigator.webdriver hidden, normal page load
+strategy, excludeSwitches, useAutomationExtension=False). The job listing page loads fine
+but individual job detail pages are blocked. recruiting2 appears to have stricter bot
+detection than recruiting.ultipro.com (where e.g. Melton works without issue).
+Possible future approaches: Playwright stealth mode, undetected-chromedriver, or manual
+cookies/session injection. Do not waste time re-tuning Selenium options — it has been tried.
 """
 
 from selenium import webdriver
