@@ -159,6 +159,14 @@ class SeleniumJobScraper:
                 options=chrome_options
             )
             SeleniumConfig.setup_driver_timeouts(self.driver)
+            # Persist webdriver property removal across all navigations (recruiting2 is strict)
+            self.driver.execute_cdp_cmd('Page.addScriptToEvaluateOnNewDocument', {
+                'source': (
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+                    "Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});"
+                    "Object.defineProperty(navigator, 'languages', {get: () => ['en-US', 'en']});"
+                )
+            })
             logger.info("Selenium WebDriver initialized")
         except Exception as e:
             logger.error(f"Failed to initialize WebDriver: {e}")
@@ -344,6 +352,7 @@ class MathisHomeScraper:
 
             description = ""
             for selector in [
+                '.sc-ukg-card',
                 '[data-automation="job-description"]',
                 '[data-automation="opportunity-description"]',
                 '.opportunity-description',
