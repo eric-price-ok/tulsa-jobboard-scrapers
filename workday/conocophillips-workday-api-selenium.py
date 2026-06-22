@@ -186,7 +186,7 @@ def _derive_workday_urls(jobboard_url: str) -> Dict[str, str]:
     """Derive API endpoint and base URL from the public-facing jobboard URL.
 
     Pattern:
-      jobboard:    https://<tenant>.wd5.myworkdayjobs.com/en-US/<BoardName>
+      jobboard:    https://<tenant>.wd5.myworkdayjobs.com/en-US/<BoardName>?locations=xxx
       api:         https://<tenant>.wd5.myworkdayjobs.com/wday/cxs/<tenant>/<BoardName>/jobs
     """
     parsed = urlparse(jobboard_url)
@@ -198,6 +198,22 @@ def _derive_workday_urls(jobboard_url: str) -> Dict[str, str]:
         'api_endpoint': f"{origin}/wday/cxs/{tenant}/{board_name}/jobs",
         'workday_base_url': f"{origin}/en-US/{board_name}",
     }
+
+
+def _extract_facets_from_url(jobboard_url: str) -> Dict:
+    """Parse appliedFacets from the jobboard URL query string.
+
+    Workday encodes facets as query params, e.g. ?locations=abc123&locations=def456.
+    parse_qs returns lists for each key, which is the format the API expects.
+    """
+    from urllib.parse import parse_qs
+    parsed = urlparse(jobboard_url)
+    params = parse_qs(parsed.query)
+    facets = {}
+    for key in ('locations', 'jobFamilyGroup', 'workerSubType', 'timeType'):
+        if key in params:
+            facets[key] = params[key]
+    return facets
 
 
 class SeleniumJobScraper:
@@ -262,7 +278,7 @@ class ConocoPhillipsScraper:
             'DNT': '1',
         })
 
-    def get_job_listings(self, api_endpoint: str, jobboard_url: str, origin: str) -> List[Dict]:
+    def get_job_listings(self, api_endpoint: str, jobboard_url: str, origin: str, facets: Dict) -> List[Dict]:
         all_jobs = []
         limit = 20
         offset = 0
@@ -271,15 +287,19 @@ class ConocoPhillipsScraper:
         while True:
             try:
                 logger.info(f"Fetching jobs with offset: {offset}")
+                body = {"limit": limit, "offset": offset, "searchText": ""}
+                if facets:
+                    body["appliedFacets"] = facets
+                    logger.info(f"  Applied facets: {facets}")
                 response = self.session.post(
                     api_endpoint,
-                    json={"limit": limit, "offset": offset, "searchText": ""},
+                    json=body,
                     headers={
                         'Referer': jobboard_url,
                         'Origin': origin,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                    }
+                    },
                 )
                 response.raise_for_status()
                 data = response.json()
@@ -410,10 +430,12 @@ class ConocoPhillipsScraper:
                 result = cursor.fetchone()
                 onsite_office_id = result['id'] if result else None
 
-                # Step 5: Fetch all jobs from API
-                logger.info("Step 5: Fetching all jobs from API...")
+                # Step 5: Fetch jobs from API using facets from the jobboard URL
+                logger.info("Step 5: Fetching jobs from API...")
+                facets = _extract_facets_from_url(jobboard_url)
+                logger.info(f"  Facets from URL: {facets}")
                 all_jobs = self.get_job_listings(
-                    urls['api_endpoint'], jobboard_url, urls['origin']
+                    urls['api_endpoint'], jobboard_url, urls['origin'], facets
                 )
                 if not all_jobs:
                     raise Exception("No jobs retrieved from API")
