@@ -276,6 +276,15 @@ class SodexoScraper:
             return False
 
     def get_job_listings(self, search_api: str, base_url: str) -> List[Dict]:
+        """
+        Fetch jobs from the iCIMS JSON search API.
+
+        Uses minimal params matching the known-working URL. Extra params like
+        searchKeyword= (empty) and startIndex/maxResults caused the server to
+        return HTML instead of JSON — only include params confirmed to work.
+        Pagination uses startIndex/maxResults but only after the first request
+        confirms JSON is being returned.
+        """
         all_jobs = []
         start_index = 0
         page_size = 20
@@ -283,14 +292,18 @@ class SodexoScraper:
 
         while True:
             try:
+                # Start with the minimal params from the known-working URL.
+                # Do NOT include searchKeyword when empty — it breaks JSON mode.
                 params = {
                     'ss':             '1',
                     'searchRelation': 'keyword_all',
-                    'searchKeyword':  '',
                     'searchLocation': self.company_config['location_query'],
-                    'startIndex':     start_index,
-                    'maxResults':     page_size,
                 }
+                # Only add pagination params after the first request succeeds
+                if start_index > 0:
+                    params['startIndex'] = start_index
+                    params['maxResults'] = page_size
+
                 logger.info(f"Fetching jobs with startIndex={start_index}")
 
                 response = self.session.get(
