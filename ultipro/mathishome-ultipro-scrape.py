@@ -3,6 +3,28 @@
 mathishome-ultipro-scrape.py
 Mathis Home UltiPro job board scraper (Gen 2)
 
+NOTE: THIS SCRIPT DOES NOT CURRENTLY WORK.
+The detail pages on recruiting2.ultipro.com return an "unsupported browser"
+error that blocks job description extraction. The listing page loads fine
+but every detail page navigation is blocked.
+
+Attempted fixes:
+- SeleniumConfig already sets --disable-blink-features=AutomationControlled,
+  excludes 'enable-automation' switch, and disables useAutomationExtension
+- setup_driver_timeouts runs execute_script to set navigator.webdriver = undefined,
+  but this does not persist across navigations
+- Added CDP Page.addScriptToEvaluateOnNewDocument to persist navigator.webdriver,
+  navigator.plugins, and navigator.languages overrides across all page loads --
+  still blocked
+
+Next things to try:
+- Use undetected-chromedriver (pip install undetected-chromedriver) instead of
+  standard chromedriver -- designed specifically for this class of detection
+- Remove --disable-images from chrome options; some UKG sites use image requests
+  as part of session/fingerprint verification
+- Load detail pages by clicking title links from within the listing page rather
+  than navigating directly by URL, to preserve referrer and session state
+
 Job board URL is read from company.jobboard at runtime rather than hardcoded.
 """
 
