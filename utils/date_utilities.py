@@ -172,7 +172,7 @@ def normalize_date_string(date_string: str) -> Optional[datetime]:
     date_string = date_string.strip()
     
     # First try relative date parsing
-    if any(keyword in date_string.lower() for keyword in ['ago', 'posted', 'days']):
+    if any(keyword in date_string.lower() for keyword in ['ago', 'posted', 'days', 'today', 'yesterday']):
         relative_date = parse_relative_date(date_string)
         if relative_date:
             return relative_date
