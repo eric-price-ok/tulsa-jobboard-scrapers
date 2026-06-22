@@ -426,7 +426,7 @@ class ConocoPhillipsScraper:
                 for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
-                        logger.info(f"Processing job {i+1}/{len(local_jobs)}: {title}")
+                        logger.info(f"Processing job {i+1}/{len(all_jobs)}: {title}")
 
                         external_path = job.get('externalPath', '')
                         if not external_path:
