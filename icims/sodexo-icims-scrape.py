@@ -258,12 +258,18 @@ class SodexoScraper:
             'DNT': '1',
         })
 
-    def establish_session(self, jobboard_url: str) -> bool:
+    def establish_session(self, jobboard_url: str, search_api: str) -> bool:
         try:
             logger.info("Establishing session with Sodexo careers page...")
-            response = self.session.get(jobboard_url)
-            response.raise_for_status()
-            logger.info("Session established successfully")
+            # Load the full jobboard URL first (sets session cookies)
+            r1 = self.session.get(jobboard_url)
+            r1.raise_for_status()
+            logger.info(f"  Loaded jobboard ({r1.status_code}), cookies: {list(self.session.cookies.keys())}")
+            # Then load the clean search page to ensure search-specific cookies are set
+            if search_api != jobboard_url:
+                r2 = self.session.get(search_api)
+                r2.raise_for_status()
+                logger.info(f"  Loaded search page ({r2.status_code}), cookies: {list(self.session.cookies.keys())}")
             return True
         except Exception as e:
             logger.error(f"Failed to establish session: {e}")
@@ -299,11 +305,11 @@ class SodexoScraper:
                 try:
                     data = response.json()
                 except Exception as json_err:
-                    logger.error(
-                        f"JSON parse failed: {json_err}\n"
-                        f"Response status: {response.status_code}\n"
-                        f"Response preview: {response.text[:500]}"
-                    )
+                    logger.error(f"JSON parse failed: {json_err}")
+                    logger.error(f"  Status:       {response.status_code}")
+                    logger.error(f"  Content-Type: {response.headers.get('Content-Type', 'unknown')}")
+                    logger.error(f"  URL:          {response.url}")
+                    logger.error(f"  Body (repr):  {repr(response.text[:300])}")
                     break
 
                 jobs = (
@@ -489,7 +495,7 @@ class SodexoScraper:
 
                 # Step 4: Establish session
                 logger.info("Step 4: Establishing session...")
-                if not self.establish_session(jobboard_url):
+                if not self.establish_session(jobboard_url, search_api):
                     raise Exception("Failed to establish session")
 
                 # Step 5: Fetch job listings from API
