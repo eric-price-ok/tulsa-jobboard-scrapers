@@ -182,21 +182,6 @@ def _log_scraping_activity(cursor, company_id: int, stats: Dict):
     ))
 
 
-def _is_local_job(job: Dict) -> bool:
-    """Check if a job has a served-city location.
-
-    Multi-location Workday postings often set locationsText to 'Multiple Locations'
-    and put the individual locations in a 'locations' list — check both.
-    """
-    if find_served_city(job.get('locationsText', '')):
-        return True
-    for loc in job.get('locations', []):
-        loc_text = loc if isinstance(loc, str) else loc.get('descriptor', '')
-        if find_served_city(loc_text):
-            return True
-    return False
-
-
 def _derive_workday_urls(jobboard_url: str) -> Dict[str, str]:
     """Derive API endpoint and base URL from the public-facing jobboard URL.
 
@@ -434,19 +419,11 @@ class ConocoPhillipsScraper:
                     raise Exception("No jobs retrieved from API")
                 logger.info(f"  Retrieved {len(all_jobs)} total jobs")
 
-                # Step 6: Filter to Tulsa-area jobs by locationsText
-                logger.info("Step 6: Filtering to Tulsa-area jobs...")
-                local_jobs = [j for j in all_jobs if _is_local_job(j)]
-                stats['found'] = len(local_jobs)
-                logger.info(f"  {len(local_jobs)} of {len(all_jobs)} jobs are in served cities")
+                stats['found'] = len(all_jobs)
 
-                if not local_jobs:
-                    logger.warning("No Tulsa-area jobs found")
-                    return stats
-
-                # Step 7: Process each job
-                logger.info("Step 7: Processing jobs...")
-                for i, job in enumerate(local_jobs):
+                # Step 6: Process each job
+                logger.info("Step 6: Processing jobs...")
+                for i, job in enumerate(all_jobs):
                     try:
                         title = job.get('title', 'Unknown')
                         logger.info(f"Processing job {i+1}/{len(local_jobs)}: {title}")
@@ -484,6 +461,7 @@ class ConocoPhillipsScraper:
                                 if city_name:
                                     break
                         city_id = get_city_id(cursor, city_name) if city_name else tulsa_city_id
+                        logger.info(f"  City: {city_name or 'fallback Tulsa'} (id: {city_id})")
 
                         job_data = {
                             'job_title': title,
@@ -514,16 +492,16 @@ class ConocoPhillipsScraper:
                         stats['errors'].append(error_msg)
                         stats['skipped'] += 1
 
-                # Step 8: Mark stale jobs closed
-                logger.info("Step 8: Marking stale jobs as closed...")
+                # Step 7: Mark stale jobs closed
+                logger.info("Step 7: Marking stale jobs as closed...")
                 mark_stale_jobs_closed(cursor, company_id)
 
-                # Step 9: Update company scrape completion
-                logger.info("Step 9: Updating company scrape completion...")
+                # Step 8: Update company scrape completion
+                logger.info("Step 8: Updating company scrape completion...")
                 _update_company_scrape_completed(cursor, company_id)
 
-                # Step 10: Log results
-                logger.info("Step 10: Logging results...")
+                # Step 9: Log results
+                logger.info("Step 9: Logging results...")
                 _log_scraping_activity(cursor, company_id, stats)
 
         except Exception as e:
