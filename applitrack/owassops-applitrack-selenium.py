@@ -77,10 +77,10 @@ def _map_job_to_function(cursor, position_type: str) -> Optional[int]:
                         logger.info(f"  Mapped '{position_type}' to function: {function_name}")
                         return result['id']
 
-    cursor.execute("SELECT id FROM functions WHERE name = %s", ('Other',))
+    cursor.execute("SELECT id FROM functions WHERE name = %s", ('Education',))
     result = cursor.fetchone()
     if result:
-        logger.info(f"  Mapped '{position_type}' to function: Other")
+        logger.info(f"  Mapped '{position_type}' to function: Education (default)")
         return result['id']
     return None
 
@@ -254,6 +254,10 @@ class OwassoJobScraper:
 
                 city_id = get_city_id(cursor, 'Owasso')
 
+                cursor.execute("SELECT id FROM officelocations WHERE LOWER(name) = LOWER(%s)", ('On-Site',))
+                result = cursor.fetchone()
+                default_office_location_id = result['id'] if result else None
+
                 # Step 2: Load listings page
                 logger.info("Step 2: Loading job listings page...")
                 page_content = self.selenium_scraper.get_page_content(job_board_url)
@@ -311,6 +315,7 @@ class OwassoJobScraper:
                             ).hexdigest(),
                             'function': _map_job_to_function(cursor, job_data.get('position_type', '')),
                             'city_id': city_id,
+                            'office_location_id': default_office_location_id,
                         }
 
                         job_id = store_job_listing(cursor, store_data, company_id, 'OPS Applitrack')
