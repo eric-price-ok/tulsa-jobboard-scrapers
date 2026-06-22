@@ -10,7 +10,7 @@ Jobs with no matching function keyword default to Information Technology.
 from utils.db_connection import get_database_connection, close_connection
 from utils.posting_operations import store_job_listing, check_existing_job_by_url, mark_stale_jobs_closed
 from utils.company_operations import get_or_create_company, get_or_create_company_site
-from utils.date_utilities import parse_relative_date
+from utils.date_utilities import normalize_date_string
 from utils.location_utilities import TULSA_METRO_CITIES
 from utils.selenium_config import SeleniumConfig
 from utils.utility_methods import setup_logging, normalize_job_type, normalize_work_location
@@ -476,7 +476,7 @@ class SagenetScraper:
                             'job_description': description,
                             'posting_url': job_url,
                             'posting_id': posting_id,
-                            'date_posted': parse_relative_date(job_meta.get('posted_date_raw', '')),
+                            'date_posted': normalize_date_string(job_meta.get('posted_date_raw', '')),
                             'scraping_hash': self.create_scraping_hash(title, job_url, description),
                             'function': _map_job_to_function(cursor, title),
                             'job_type_id': _map_job_type(cursor, job_meta.get('schedule', '')),
