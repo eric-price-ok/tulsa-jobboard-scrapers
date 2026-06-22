@@ -3,11 +3,34 @@
 sodexo-icims-scrape.py
 Sodexo iCIMS job board scraper (Gen 2)
 
-Job board URL is read from company.jobboard at runtime. The search_api
-and base_url are derived from that URL automatically.
+NOTE: THIS SCRIPT DOES NOT CURRENTLY WORK. We do not fully understand how
+Sodexo's iCIMS instance handles API requests and have not been able to get
+it to return JSON reliably from a Python requests session.
 
-Uses Strategy A (location_query = 'Tulsa, OK') to filter at the API level
-since Sodexo is a nationwide employer with a large job volume.
+Known working URL (returns JSON in a browser):
+  https://external-careers-sodexo.icims.com/jobs/search?ss=1&searchRelation=keyword_all&searchLocation=-12820-
+
+What we've tried:
+- ss=1 is supposed to switch iCIMS from HTML to JSON mode — works in browser,
+  but our requests.Session consistently gets back text/html (Content-Type:
+  text/html;charset=UTF-8) with a full XHTML page body
+- Sending searchKeyword= (empty string) alongside the other params caused the
+  HTML response — removed it to match the exact working URL params exactly
+- Added searchRelation=keyword_all to match the working URL
+- Changed location param from text 'Tulsa, OK' to the iCIMS numeric ID '-12820-'
+- establish_session now loads both the jobboard URL and clean search URL to
+  populate JSESSIONID and icimsCookiesEnabledCheck cookies before API calls —
+  cookies are confirmed present but the API call still returns HTML
+- Pagination params (startIndex, maxResults) are now withheld on the first
+  request and only added on subsequent pages
+
+Next things to try:
+- Inspect what headers/cookies the browser sends on a successful JSON request
+  and replicate them exactly (devtools → Network → copy as cURL)
+- Try sending the request with a real browser User-Agent and no X-Requested-With
+- The iCIMS instance may require a specific referer or origin value not yet tried
+- May need to use Selenium to load the search page and extract the JSON from
+  the network response or page source rather than using requests directly
 """
 
 from utils.db_connection import get_database_connection, close_connection
