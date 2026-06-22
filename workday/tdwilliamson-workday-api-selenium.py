@@ -49,7 +49,7 @@ _FUNCTION_KEYWORDS = {
     'Engineering, Civil': ['civil engineer', 'civil', 'structural'],
     'Information Technology': [
         'software', 'developer', 'programmer', 'data scientist', 'data engineer',
-        'analyst', 'database', 'network', 'devops', 'cloud', 'cybersecurity',
+        'database', 'network', 'devops', 'cloud', 'cybersecurity',
         'cyber', 'application', 'web', 'mobile', 'scrum', 'agile',
     ],
     'Project Management': [
