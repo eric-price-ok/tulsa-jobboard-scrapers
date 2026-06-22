@@ -182,6 +182,21 @@ def _log_scraping_activity(cursor, company_id: int, stats: Dict):
     ))
 
 
+def _is_local_job(job: Dict) -> bool:
+    """Check if a job has a served-city location.
+
+    Multi-location Workday postings often set locationsText to 'Multiple Locations'
+    and put the individual locations in a 'locations' list — check both.
+    """
+    if find_served_city(job.get('locationsText', '')):
+        return True
+    for loc in job.get('locations', []):
+        loc_text = loc if isinstance(loc, str) else loc.get('descriptor', '')
+        if find_served_city(loc_text):
+            return True
+    return False
+
+
 def _derive_workday_urls(jobboard_url: str) -> Dict[str, str]:
     """Derive API endpoint and base URL from the public-facing jobboard URL.
 
@@ -421,10 +436,7 @@ class ConocoPhillipsScraper:
 
                 # Step 6: Filter to Tulsa-area jobs by locationsText
                 logger.info("Step 6: Filtering to Tulsa-area jobs...")
-                local_jobs = [
-                    j for j in all_jobs
-                    if find_served_city(j.get('locationsText', ''))
-                ]
+                local_jobs = [j for j in all_jobs if _is_local_job(j)]
                 stats['found'] = len(local_jobs)
                 logger.info(f"  {len(local_jobs)} of {len(all_jobs)} jobs are in served cities")
 
@@ -465,6 +477,12 @@ class ConocoPhillipsScraper:
                             continue
 
                         city_name = find_served_city(job.get('locationsText', ''))
+                        if not city_name:
+                            for loc in job.get('locations', []):
+                                loc_text = loc if isinstance(loc, str) else loc.get('descriptor', '')
+                                city_name = find_served_city(loc_text)
+                                if city_name:
+                                    break
                         city_id = get_city_id(cursor, city_name) if city_name else tulsa_city_id
 
                         job_data = {
