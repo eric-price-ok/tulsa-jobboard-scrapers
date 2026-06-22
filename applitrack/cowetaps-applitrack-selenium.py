@@ -47,7 +47,7 @@ _FUNCTION_KEYWORDS = {
         'occupational therapist'
     ],
     'Information Technology': [
-        'technology', 'it', 'computer', 'network', 'systems', 'tech support'
+        'technology', 'computer', 'network', 'systems', 'tech support'
     ],
     'Transportation/Logistics': [
         'bus', 'driver', 'transportation', 'mechanic', 'fleet'

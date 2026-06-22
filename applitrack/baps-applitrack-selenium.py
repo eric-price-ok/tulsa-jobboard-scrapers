@@ -58,7 +58,7 @@ _FUNCTION_KEYWORDS = {
         'custodian', 'nurse', 'health', 'security', 'monitor'
     ],
     'Information Technology': [
-        'technology', 'it', 'computer', 'network', 'systems', 'tech support'
+        'technology', 'computer', 'network', 'systems', 'tech support'
     ],
     'Transportation': [
         'bus', 'driver', 'transportation', 'mechanic', 'fleet'
