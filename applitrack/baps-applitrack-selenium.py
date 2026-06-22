@@ -2,7 +2,7 @@
 """
 baps-applitrack-selenium.py
 Broken Arrow Public Schools Applitrack Job Board Scraper
-Selenium-based extraction with attached DOCX/PDF job description support
+Selenium-based extraction with inline job descriptions (JS toggle div)
 """
 
 from selenium import webdriver
@@ -18,13 +18,6 @@ import re
 from bs4 import BeautifulSoup
 import logging
 from typing import Dict, List, Optional
-import requests
-import os
-import tempfile
-
-import mammoth
-import PyPDF2
-
 from utils.db_connection import get_database_connection, close_connection
 from utils.posting_operations import check_existing_job_by_url, store_job_listing, mark_stale_jobs_closed
 from utils.company_operations import get_company_config_by_name
@@ -124,76 +117,6 @@ def _log_scraping_activity(cursor, job_board: str, company_id: int, stats: Dict)
     ))
 
 
-class DocumentProcessor:
-    """Downloads and extracts text from attached DOCX/PDF job description files"""
-
-    def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-        })
-
-    def download_and_extract_text(self, document_url: str) -> str:
-        """Download document and extract text content"""
-        try:
-            logger.info(f"  Downloading document: {document_url}")
-            response = self.session.get(document_url, timeout=30)
-            response.raise_for_status()
-
-            content_type = response.headers.get('content-type', '').lower()
-            is_pdf = 'pdf' in content_type or document_url.lower().endswith('.pdf')
-            is_docx = 'word' in content_type or document_url.lower().endswith('.docx')
-
-            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                temp_file.write(response.content)
-                temp_path = temp_file.name
-
-            try:
-                if is_docx:
-                    text = self._extract_docx_text(temp_path)
-                elif is_pdf:
-                    text = self._extract_pdf_text(temp_path)
-                else:
-                    try:
-                        text = self._extract_docx_text(temp_path)
-                    except Exception:
-                        text = self._extract_pdf_text(temp_path)
-
-                logger.info(f"  Extracted {len(text)} characters from document")
-                return text
-
-            finally:
-                try:
-                    os.unlink(temp_path)
-                except Exception:
-                    pass
-
-        except Exception as e:
-            logger.error(f"  Error processing document {document_url}: {e}")
-            return ""
-
-    def _extract_docx_text(self, file_path: str) -> str:
-        try:
-            with open(file_path, 'rb') as docx_file:
-                result = mammoth.extract_raw_text(docx_file)
-                return result.value
-        except Exception as e:
-            logger.warning(f"Failed to extract DOCX text: {e}")
-            return ""
-
-    def _extract_pdf_text(self, file_path: str) -> str:
-        try:
-            text = ""
-            with open(file_path, 'rb') as pdf_file:
-                pdf_reader = PyPDF2.PdfReader(pdf_file)
-                for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
-            return text
-        except Exception as e:
-            logger.warning(f"Failed to extract PDF text: {e}")
-            return ""
-
-
 class SeleniumJobScraper:
     """Loads the Applitrack job board page and returns HTML"""
 
@@ -252,7 +175,6 @@ class BrokenArrowJobScraper:
     def __init__(self, conn):
         self.conn = conn
         self.selenium_scraper = SeleniumJobScraper(headless=True)
-        self.document_processor = DocumentProcessor()
 
     def extract_job_id_and_url(self, job_element, base_url: str) -> tuple:
         """Extract JobID from title2 span and build canonical detail URL"""
@@ -310,36 +232,23 @@ class BrokenArrowJobScraper:
 
         return job_data
 
-    def get_job_description_from_attachment(self, job_element) -> str:
-        """Download and extract text from the attached DOCX/PDF in the listing"""
+    def get_job_description_inline(self, job_element) -> str:
+        """Extract description from the hidden toggle div (DescriptionText{id}_ pattern)"""
         try:
-            attachments_div = job_element.find('div', class_='AppliTrackJobPostingAttachments')
-            if not attachments_div:
-                logger.warning("  No AppliTrackJobPostingAttachments div found")
-                return ""
-
-            for link in attachments_div.find_all('a', href=True):
-                href = link.get('href')
-                if not href or 'BrowseFile.aspx' not in href:
-                    continue
-
-                if href.startswith('/'):
-                    document_url = f"https://www.applitrack.com{href}"
-                elif not href.startswith('http'):
-                    document_url = f"https://www.applitrack.com/baschools/onlineapp/{href}"
-                else:
-                    document_url = href
-
-                logger.info(f"  Found attachment: {document_url}")
-                text = self.document_processor.download_and_extract_text(document_url)
-                if text and len(text.strip()) > 50:
-                    return text
-
-            logger.warning("  No valid attachment found")
+            for link in job_element.find_all('a', href=True):
+                match = re.search(r"toggle_block\('([^']+)'\)", link.get('href', ''))
+                if match:
+                    div_id = match.group(1)
+                    desc_div = job_element.find(id=div_id)
+                    if desc_div:
+                        text = desc_div.get_text(strip=True)
+                        if len(text) > 50:
+                            logger.info(f"  Extracted description from #{div_id}: {len(text)} chars")
+                            return text
+            logger.warning("  No toggle_block description div found")
             return ""
-
         except Exception as e:
-            logger.error(f"  Error getting attachment: {e}")
+            logger.error(f"  Error extracting inline description: {e}")
             return ""
 
     def scrape_jobs(self) -> Dict:
@@ -402,9 +311,8 @@ class BrokenArrowJobScraper:
                             stats['updated'] += 1
                             continue
 
-                        job_description = self.get_job_description_from_attachment(job_element)
-                        if not job_description or len(job_description.strip()) < 50:
-                            logger.warning("  No attachment description; using placeholder")
+                        job_description = self.get_job_description_inline(job_element)
+                        if not job_description:
                             job_description = (
                                 f"Job posting for {job_data.get('job_title', 'position')} "
                                 f"— see original posting for details."
