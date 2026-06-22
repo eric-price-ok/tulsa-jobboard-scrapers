@@ -6,29 +6,33 @@ Common utility functions used across all scrapers
 
 import logging
 import hashlib
+import os
 import re
+from datetime import datetime
 from typing import Dict, Optional
 
 def setup_logging(company_name: str, log_level=logging.INFO):
     """
     Configure logging for scraper with company-specific log file
-    
+
     Args:
         company_name: Name of the company (e.g., 'Melton Truck Lines')
         log_level: Logging level (default: logging.INFO)
-    
+
     Returns:
         logger: Configured logger instance
     """
     # Create log filename: first 10 letters + _scraper.log
     clean_name = re.sub(r'[^a-zA-Z]', '', company_name.lower())[:10]
-    
+
     # Ensure we have at least some characters for filename
     if len(clean_name) < 3:
         clean_name = 'company'  # fallback name
-    
-    log_filename = f"{clean_name}_scraper.log"
-    
+
+    os.makedirs('logs', exist_ok=True)
+    timestamp = datetime.now().strftime('%Y%m%d%H%M')
+    log_filename = f"logs/{clean_name}_scraper_{timestamp}.log"
+
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(levelname)s - %(message)s',

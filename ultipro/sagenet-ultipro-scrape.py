@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 """
-template-ultipro-selenium-scrape.py
-TEMPLATE — UltiPro/UKG Pro Recruiting Selenium scraper (Gen 2)
+sagenet-ultipro-scrape.py
+Sagenet UltiPro job board scraper (Gen 2)
 
-Copy this file, rename it, and fill in every TODO section.
-UltiPro/UKG Pro Recruiting does not expose a public REST API; this scraper uses
-Selenium for both the job listing page (data-automation="opportunity" cards)
-and each individual job detail page.
-
-Location filtering: job cards include a physical_location field. Set
-FILTER_TO_TULSA = True to drop cards outside the Tulsa metro before fetching
-detail pages; leave False for companies that only post Tulsa-area jobs anyway.
+Job board URL is read from company.jobboard at runtime rather than hardcoded.
+Jobs with no matching function keyword default to Information Technology.
 """
 
 from utils.db_connection import get_database_connection, close_connection
@@ -34,36 +28,26 @@ import re
 from bs4 import BeautifulSoup, NavigableString, Tag
 from typing import Dict, List, Optional, Tuple
 
-# TODO: Replace with company name for log file
-logger = setup_logging('Company Name')
+logger = setup_logging('Sagenet')
 
-# Set True to keep only cards whose physical_location is in the Tulsa metro.
-# Leave False for companies that exclusively post Tulsa-area jobs.
-FILTER_TO_TULSA = False  # TODO: set True if company has non-Tulsa locations
+FILTER_TO_TULSA = False
 
-
-# TODO: Replace with industry-appropriate keyword mappings.
-# Keys must match names in the functions table.
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
         'software', 'developer', 'programmer', 'data', 'database',
         'system', 'network', 'security', 'devops', 'cloud', 'application',
-        'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber',
+        'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber', 'engineer',
+        'architect', 'infrastructure', 'noc', 'helpdesk', 'help desk',
+        'technician', 'analyst', 'it ', 'telecom', 'wireless', 'iot',
     ],
-    'Engineering, Mechanical': ['mechanical', 'mechanical engineer'],
-    'Engineering, Electrical': ['electrical', 'electrical engineer', 'controls'],
-    'Manufacturing': ['manufacturing', 'production', 'assembly', 'fabrication'],
     'Sales': ['sales', 'account manager', 'business development', 'account executive'],
-    'Customer Service': ['customer service', 'support', 'help desk', 'client'],
+    'Customer Service': ['customer service', 'support', 'client'],
     'Project Management': ['project manager', 'program manager', 'operations manager'],
     'Finance': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'benefits'],
-    'Marketing': ['marketing', 'brand', 'communications', 'social media'],
+    'Marketing': ['marketing', 'brand', 'communications'],
     'Legal': ['legal', 'attorney', 'counsel', 'compliance', 'contract'],
-    'Quality': ['quality', 'qa', 'qc', 'inspector', 'quality engineer'],
-    'Skilled Labor': ['technician', 'maintenance', 'mechanic', 'welder', 'operator'],
     'Administration': ['admin', 'administrative', 'coordinator', 'assistant'],
-    'Security': ['security', 'safety', 'guard'],
 }
 
 
@@ -89,7 +73,7 @@ def _clean_html_description(element) -> str:
 
 
 def _map_job_to_function(cursor, job_title: str) -> Optional[int]:
-    """Map job title to function ID via keyword matching."""
+    """Map job title to function ID; defaults to Information Technology."""
     title_lower = job_title.lower()
     for function_name, keywords in _FUNCTION_KEYWORDS.items():
         for keyword in keywords:
@@ -99,17 +83,16 @@ def _map_job_to_function(cursor, job_title: str) -> Optional[int]:
                 if result:
                     logger.info(f"  Mapped '{job_title}' to function: {function_name}")
                     return result['id']
-    cursor.execute("SELECT id FROM functions WHERE name = %s", ('Other',))
+    cursor.execute("SELECT id FROM functions WHERE name = %s", ('Information Technology',))
     result = cursor.fetchone()
     if result:
-        logger.info(f"  Mapped '{job_title}' to function: Other (no specific match)")
+        logger.info(f"  Mapped '{job_title}' to function: Information Technology (default)")
         return result['id']
     logger.warning(f"  Could not map '{job_title}' to any function")
     return None
 
 
 def _map_job_type(cursor, schedule: str) -> Optional[int]:
-    """Map UltiPro schedule/hours string to job_type_id."""
     canonical = normalize_job_type(schedule)
     if not canonical:
         logger.warning(f"  Could not map schedule '{schedule}' to any job type")
@@ -124,7 +107,6 @@ def _map_job_type(cursor, schedule: str) -> Optional[int]:
 
 
 def _map_work_location(cursor, location_type: str) -> Optional[int]:
-    """Map UltiPro location-type string to office_location_id."""
     canonical = normalize_work_location(location_type)
     if not canonical:
         logger.warning(f"  Could not map location type '{location_type}' to any work location")
@@ -292,7 +274,6 @@ class SeleniumJobScraper:
             except TimeoutException:
                 logger.warning("  Body tag not found within timeout")
                 return ""
-            # Wait for UltiPro job description container; fall back to timed sleep
             try:
                 wait.until(EC.presence_of_element_located(
                     (By.CSS_SELECTOR, '[data-automation="job-description"], .opportunity-description')
@@ -319,42 +300,27 @@ class SeleniumJobScraper:
                 pass
 
 
-class UltiProScraper:
-    """
-    TODO: Rename this class (e.g. FamilyAndChildrensScraper).
-    """
+class SagenetScraper:
 
     def __init__(self, conn):
         self.conn = conn
         self.selenium_scraper = SeleniumJobScraper(headless=True)
 
-        # TODO: Fill in all company_config values.
-        # job_board_url: the public UltiPro careers page (listing page)
-        # company_type_name: must match a value in the company_type table:
-        #   'Private Company', 'Public Company', 'Non-Profit', 'Government / Public Sector'
         self.company_config = {
-            'name': 'TODO Company Name',             # must match company.common_name in DB
-            'website': 'https://www.TODO.com',
-            'job_board_url': (
-                'https://recruiting.ultipro.com/TODO/JobBoard/TODO/?q=&o=postedDateDesc'
-            ),
-            'company_type_name': 'Private Company',  # TODO: adjust if needed
-            'source_job_board': 'TODO Company UltiPro',  # label written to scrapinglog
+            'name': 'Sagenet',
+            'website': 'https://www.sagenet.com',
+            'company_type_name': 'Private Company',
+            'source_job_board': 'Sagenet Ultipro',
         }
 
     def _is_tulsa_location(self, physical_location: str) -> bool:
-        """Return True if physical_location mentions a Tulsa-metro city."""
         if not physical_location:
             return False
         location_lower = physical_location.lower()
         return any(city.lower() in location_lower for city in TULSA_METRO_CITIES)
 
     def extract_job_content(self, html_content: str) -> Tuple[str, Dict]:
-        """
-        Parse detail page HTML.
-        Returns (description_html, extracted_fields).
-        extracted_fields keys: location_description, requisition_number
-        """
+        """Parse detail page HTML. Returns (description_html, extracted_fields)."""
         extracted: Dict = {
             'location_description': None,
             'requisition_number': None,
@@ -363,13 +329,11 @@ class UltiProScraper:
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
 
-            # Location description used to resolve/create the company site record
             loc_span = soup.find(attrs={'data-automation': 'location-description'})
             if loc_span:
                 extracted['location_description'] = loc_span.get_text(strip=True)
                 logger.info(f"  Location description: '{extracted['location_description']}'")
 
-            # Requisition number (if not already captured from the listing card)
             for strong in soup.find_all('strong'):
                 if 'requisition' in strong.get_text(strip=True).lower():
                     sibling = strong.find_next_sibling()
@@ -377,11 +341,9 @@ class UltiProScraper:
                         extracted['requisition_number'] = sibling.get_text(strip=True)
                         break
 
-            # Remove non-content tags before extracting description
             for tag in soup.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
                 tag.decompose()
 
-            # Try UltiPro-specific selectors, then fall back to full body
             description = ""
             for selector in [
                 '[data-automation="job-description"]',
@@ -423,12 +385,23 @@ class UltiProScraper:
                 company_id = get_or_create_company(cursor, {
                     'name': self.company_config['name'],
                     'website': self.company_config['website'],
-                    'jobboard': self.company_config['job_board_url'],
                     'company_type_name': self.company_config['company_type_name'],
                 })
                 logger.info(f"  Company ID: {company_id}")
 
-                # Step 2: Look up Tulsa city ID and default On-site office location
+                # Step 2: Look up job board URL from company record
+                logger.info("Step 2: Looking up job board URL from company table...")
+                cursor.execute("SELECT jobboard FROM company WHERE id = %s", (company_id,))
+                row = cursor.fetchone()
+                if not row or not row['jobboard']:
+                    raise Exception(
+                        f"No jobboard URL found for '{self.company_config['name']}' in company table. "
+                        "Set company.jobboard before running this scraper."
+                    )
+                job_board_url = row['jobboard']
+                logger.info(f"  Job board URL: {job_board_url}")
+
+                # Step 3: Look up Tulsa city ID and default On-site office location
                 cursor.execute("SELECT id FROM cities WHERE city_name = 'Tulsa'")
                 result = cursor.fetchone()
                 tulsa_city_id = result['id'] if result else None
@@ -438,16 +411,14 @@ class UltiProScraper:
                 result = cursor.fetchone()
                 onsite_office_id = result['id'] if result else None
 
-                # Step 3: Get job listings via Selenium
-                logger.info("Step 3: Getting job listings from UltiPro page...")
-                all_jobs = self.selenium_scraper.get_job_listings(
-                    self.company_config['job_board_url']
-                )
+                # Step 4: Get job listings via Selenium
+                logger.info("Step 4: Getting job listings from UltiPro page...")
+                all_jobs = self.selenium_scraper.get_job_listings(job_board_url)
                 if not all_jobs:
                     raise Exception("No jobs retrieved from listing page")
                 logger.info(f"  Retrieved {len(all_jobs)} job cards")
 
-                # Step 4: Optional Tulsa location filter
+                # Step 5: Optional Tulsa location filter
                 if FILTER_TO_TULSA:
                     filtered = [
                         j for j in all_jobs
@@ -458,7 +429,7 @@ class UltiProScraper:
 
                 stats['found'] = len(all_jobs)
 
-                # Step 5: Process each job
+                # Step 6: Process each job
                 for i, job_meta in enumerate(all_jobs):
                     try:
                         title = job_meta.get('job_title', 'Unknown')
@@ -475,7 +446,6 @@ class UltiProScraper:
                             stats['updated'] += 1
                             continue
 
-                        # Fetch detail page for new jobs only
                         html = self.selenium_scraper.get_job_content(job_url)
                         if not html or len(html.strip()) < 100:
                             logger.warning("  Failed to get detail page content, skipping")
@@ -488,7 +458,6 @@ class UltiProScraper:
                             stats['skipped'] += 1
                             continue
 
-                        # Resolve company site from detail-page location description
                         company_site_id = None
                         loc_desc = extracted.get('location_description')
                         if loc_desc:
@@ -497,7 +466,6 @@ class UltiProScraper:
                                 city_id=tulsa_city_id, logger=logger
                             )
 
-                        # Prefer detail-page requisition number; fall back to card value
                         posting_id = (
                             extracted.get('requisition_number')
                             or job_meta.get('requisition_number')
@@ -535,16 +503,16 @@ class UltiProScraper:
                         stats['errors'].append(error_msg)
                         stats['skipped'] += 1
 
-                # Step 6: Mark stale jobs as closed
-                logger.info("Step 6: Marking stale jobs as closed...")
+                # Step 7: Mark stale jobs as closed
+                logger.info("Step 7: Marking stale jobs as closed...")
                 mark_stale_jobs_closed(cursor, company_id)
 
-                # Step 7: Update company scrape completion
-                logger.info("Step 7: Updating company scrape completion...")
+                # Step 8: Update company scrape completion
+                logger.info("Step 8: Updating company scrape completion...")
                 _update_company_scrape_completed(cursor, company_id)
 
-                # Step 8: Log results
-                logger.info("Step 8: Logging results...")
+                # Step 9: Log results
+                logger.info("Step 9: Logging results...")
                 _log_scraping_activity(
                     cursor, self.company_config['source_job_board'], company_id, stats
                 )
@@ -566,9 +534,9 @@ def main():
     scraper = None
     try:
         conn = get_database_connection()
-        scraper = UltiProScraper(conn)  # TODO: rename to match class name above
+        scraper = SagenetScraper(conn)
 
-        logger.info(f"Starting {scraper.company_config['name']} job scraping...")
+        logger.info("Starting Sagenet job scraping...")
         results = scraper.scrape_jobs()
 
         logger.info("=== SCRAPING SUMMARY ===")
