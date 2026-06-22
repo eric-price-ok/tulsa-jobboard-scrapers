@@ -246,7 +246,7 @@ class SodexoScraper:
             'website':           'https://www.sodexo.com',
             'company_type_name': 'Public Company',
             'source_job_board':  'Sodexo iCIMS',
-            'location_query':    'Tulsa, OK',
+            'location_query':    '-12820-',   # iCIMS location ID for Tulsa, OK
         }
 
         self.session = requests.Session()
@@ -279,6 +279,7 @@ class SodexoScraper:
             try:
                 params = {
                     'ss':             '1',
+                    'searchRelation': 'keyword_all',
                     'searchKeyword':  '',
                     'searchLocation': self.company_config['location_query'],
                     'startIndex':     start_index,
@@ -295,7 +296,15 @@ class SodexoScraper:
                     }
                 )
                 response.raise_for_status()
-                data = response.json()
+                try:
+                    data = response.json()
+                except Exception as json_err:
+                    logger.error(
+                        f"JSON parse failed: {json_err}\n"
+                        f"Response status: {response.status_code}\n"
+                        f"Response preview: {response.text[:500]}"
+                    )
+                    break
 
                 jobs = (
                     data.get('searchResults')
