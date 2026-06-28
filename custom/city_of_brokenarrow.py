@@ -106,18 +106,14 @@ class DatabaseManager:
         self.logger.warning(f"  Could not map '{job_type_str}' to any job type")
         return None
     
-    def _map_job_function(self, job_title: str) -> int:
-        """Map job title to function with government-specific mappings, default to 'Other' (ID 32)"""
-        if not job_title:
-            return 32
-            
-        job_title_lower = job_title.lower()
-        
+    def _map_job_function(self, job_title: str) -> Optional[int]:
+        """Map job title to function with government-specific mappings, default to 'Other'"""
+        job_title_lower = (job_title or '').lower()
+
         with self.conn.cursor() as cursor:
-            # Government-specific function keywords
             function_keywords = {
                 'Public Safety': ['police', 'fire', 'emergency', '911', 'dispatcher', 'security', 'officer', 'detective', 'firefighter', 'ems', 'paramedic'],
-                'Public Works': ['utilities', 'water', 'sewer', 'streets', 'maintenance', 'facilities', 'public works', 'utilities', 'infrastructure', 'roads'],
+                'Public Works': ['utilities', 'water', 'sewer', 'streets', 'maintenance', 'facilities', 'public works', 'infrastructure', 'roads'],
                 'Administration': ['clerk', 'admin', 'administrative', 'finance', 'hr', 'human resources', 'budget', 'treasurer', 'accounting', 'receptionist', 'assistant'],
                 'Legal': ['legal', 'attorney', 'prosecutor', 'court', 'judge', 'bailiff', 'legal assistant'],
                 'Engineering': ['engineer', 'engineering', 'planner', 'planning', 'zoning', 'building', 'inspection', 'development', 'architect'],
@@ -126,18 +122,24 @@ class DatabaseManager:
                 'Transportation/Logistics': ['fleet', 'vehicle', 'equipment', 'driver', 'mechanic', 'transportation'],
                 'Customer Service': ['customer', 'service', 'support', 'public', 'citizen']
             }
-            
-            # Try to find matching function
-            for function_name, keywords in function_keywords.items():
-                if any(keyword in job_title_lower for keyword in keywords):
-                    cursor.execute("SELECT id FROM functions WHERE name = %s", (function_name,))
-                    result = cursor.fetchone()
-                    if result:
-                        self.logger.info(f"  Mapped '{job_title}' to function ID: {result['id']} via '{function_name}'")
-                        return result['id']
-        
-        self.logger.info(f"  Mapped '{job_title}' to default function: Other (ID: 32)")
-        return 32
+
+            if job_title_lower:
+                for function_name, keywords in function_keywords.items():
+                    if any(keyword in job_title_lower for keyword in keywords):
+                        cursor.execute("SELECT id FROM functions WHERE name = %s", (function_name,))
+                        result = cursor.fetchone()
+                        if result:
+                            self.logger.info(f"  Mapped '{job_title}' to function: {function_name}")
+                            return result['id']
+
+            cursor.execute("SELECT id FROM functions WHERE name = 'Other'")
+            result = cursor.fetchone()
+            if result:
+                self.logger.info(f"  Mapped '{job_title}' to default function: Other")
+                return result['id']
+
+        self.logger.warning(f"  'Other' function not found in database")
+        return None
     
     def update_company_scrape_completed(self, company_id: int):
         """Update last_full_scrape_completed timestamp for company"""
