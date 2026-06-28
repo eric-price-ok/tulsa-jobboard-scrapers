@@ -8,11 +8,11 @@ Handles governmentjobs.com job boards with Selenium for full job description ext
 from utils.selenium_config import SeleniumConfig
 from utils.posting_operations import store_job_listing, load_active_jobs_cache, check_job_in_cache, update_job_verified_timestamp, mark_stale_jobs_closed
 from utils.utility_methods import setup_logging
-from utils.company_operations import get_or_create_company, get_company_config_by_name
+from utils.company_operations import get_company_config_by_name
 from utils.db_connection import get_database_connection
 from utils.date_utilities import normalize_date_string
+from utils.location_utilities import get_city_id
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -56,16 +56,16 @@ class DatabaseManager:
     def store_job_listing(self, job_data: Dict, company_id: int) -> int:
         """Store new job listing using posting_operations"""
         with self.conn.cursor() as cursor:
-            # Map categorical fields before storing
+            city_id = get_city_id(cursor, 'Broken Arrow')
             enhanced_job_data = job_data.copy()
             enhanced_job_data.update({
                 'company_id': company_id,
                 'job_type_id': self._map_job_type(job_data.get('job_type', '')),
                 'function': self._map_job_function(job_data.get('job_title', '')),
                 'office_location_id': 1,  # Default to In Office for government jobs
-                'city_id': 4  # City of Broken Arrow
+                'city_id': city_id
             })
-        
+
             return store_job_listing(cursor, enhanced_job_data, company_id, 'Broken Arrow Government Jobs')
 
     def _map_job_type(self, job_type_str: str) -> Optional[int]:
@@ -80,7 +80,7 @@ class DatabaseManager:
         
         with self.conn.cursor() as cursor:
             # Try exact match first
-            cursor.execute("SELECT id FROM JobType WHERE LOWER(name) LIKE %s", (f"%{job_type_clean}%",))
+            cursor.execute("SELECT id FROM jobtype WHERE LOWER(name) LIKE %s", (f"%{job_type_clean}%",))
             result = cursor.fetchone()
             if result:
                 self.logger.info(f"  Mapped '{job_type_str}' to job type ID: {result['id']}")
@@ -97,7 +97,7 @@ class DatabaseManager:
             
             for job_type_key, variations in job_type_mappings.items():
                 if any(var in job_type_clean for var in variations):
-                    cursor.execute("SELECT id FROM JobType WHERE LOWER(name) LIKE %s", (f"%{job_type_key}%",))
+                    cursor.execute("SELECT id FROM jobtype WHERE LOWER(name) LIKE %s", (f"%{job_type_key}%",))
                     result = cursor.fetchone()
                     if result:
                         self.logger.info(f"  Mapped '{job_type_str}' to job type ID: {result['id']} via '{job_type_key}'")
@@ -130,7 +130,7 @@ class DatabaseManager:
             # Try to find matching function
             for function_name, keywords in function_keywords.items():
                 if any(keyword in job_title_lower for keyword in keywords):
-                    cursor.execute("SELECT id FROM Functions WHERE name = %s", (function_name,))
+                    cursor.execute("SELECT id FROM functions WHERE name = %s", (function_name,))
                     result = cursor.fetchone()
                     if result:
                         self.logger.info(f"  Mapped '{job_title}' to function ID: {result['id']} via '{function_name}'")
@@ -143,8 +143,8 @@ class DatabaseManager:
         """Update last_full_scrape_completed timestamp for company"""
         with self.conn.cursor() as cursor:
             cursor.execute("""
-                UPDATE Company 
-                SET last_full_scrape_completed = CURRENT_TIMESTAMP 
+                UPDATE company
+                SET last_full_scrape_completed = CURRENT_TIMESTAMP
                 WHERE id = %s
             """, (company_id,))
             self.logger.info(f"Updated last_full_scrape_completed for company {company_id}")
@@ -153,8 +153,8 @@ class DatabaseManager:
         """Log scraping results"""
         with self.conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO ScrapingLog (
-                    job_board, jobs_found, jobs_added, jobs_updated, 
+                INSERT INTO scrapinglog (
+                    job_board, jobs_found, jobs_added, jobs_updated,
                     jobs_skipped, errors, status
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (
@@ -294,28 +294,51 @@ class SeleniumJobScraper:
             return None
     
     def extract_job_description(self, html_content: str) -> str:
-        """Extract job description from HTML content (body tags only)"""
+        """Extract job description from HTML content"""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Get body content
+
+            # Try targeted containers first (governmentjobs.com selectors)
+            for selector in [
+                'div.job-description',
+                'section.job-description',
+                'div#job-description',
+                'div.description',
+                'article',
+                'main',
+                'div[role="main"]',
+            ]:
+                container = soup.select_one(selector)
+                if container:
+                    text = re.sub(r'\s+', ' ', container.get_text(separator=' ', strip=True)).strip()
+                    if len(text) > 100:
+                        self.logger.info(f"  Extracted job description via '{selector}': {len(text)} characters")
+                        return text[:50000]
+
+            # Fall back to full body with aggressive noise stripping
             body = soup.find('body')
             if body:
-                # Remove scripts, styles, navigation
-                for tag in body.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
+                for tag in body.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer',
+                                          'aside', 'button', 'form', 'input', 'select', 'label',
+                                          'iframe', 'figure', 'picture']):
                     tag.decompose()
-                
-                body_text = body.get_text(separator=' ', strip=True)
+
+                for cls in ['breadcrumb', 'cookie', 'modal', 'overlay', 'pagination',
+                            'menu', 'toolbar', 'banner', 'sidebar', 'alert']:
+                    for tag in body.find_all(class_=lambda c: c and cls in ' '.join(c).lower()):
+                        tag.decompose()
+
+                body_text = re.sub(r'\s+', ' ', body.get_text(separator=' ', strip=True)).strip()
                 if len(body_text) > 100:
-                    self.logger.info(f"  Extracted job description: {len(body_text)} characters")
-                    return body_text
-            
+                    self.logger.info(f"  Extracted job description from body: {len(body_text)} characters")
+                    return body_text[:50000]
+
             self.logger.warning(f"  No meaningful job description found")
-            return html_content
-            
+            return html_content[:50000]
+
         except Exception as e:
             self.logger.warning(f"Error extracting job description: {e}")
-            return html_content
+            return html_content[:50000]
     
     def parse_salary(self, salary_text: str) -> tuple:
         """Parse salary string and return (min_salary, max_salary, frequency)"""
