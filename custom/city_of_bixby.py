@@ -305,12 +305,12 @@ class SeleniumJobScraper:
                     return re.sub(r'\s*(Department|Location|Salary).*$', '', m.group(1).strip(), flags=re.IGNORECASE)
                 return None
 
-            # Try targeted containers first
+            # Try Bixby-specific container first, then generic fallbacks
             for selector in [
+                'div.jobsListingContent',
                 'div.job-description',
                 'section.job-description',
                 'div#job-description',
-                'div.description',
                 'article',
                 'main',
                 'div[role="main"]',
