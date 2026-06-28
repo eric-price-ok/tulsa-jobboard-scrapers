@@ -16,6 +16,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+import re
 import time
 from datetime import datetime
 from bs4 import BeautifulSoup
@@ -333,22 +334,48 @@ class SeleniumJobScraper:
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
 
+            # Try targeted containers first (PeopleSoft/Oracle HCM selectors)
+            for selector in [
+                '[data-ph-at-id*="description"]',
+                '[data-ph-at-id*="job-detail"]',
+                'div.job-description',
+                'section.job-description',
+                'div#job-description',
+                'article',
+                'main',
+                'div[role="main"]',
+            ]:
+                container = soup.select_one(selector)
+                if container:
+                    text = re.sub(r'\s+', ' ', container.get_text(separator=' ', strip=True)).strip()
+                    if len(text) > 100:
+                        self.logger.info(f"  Extracted job description via '{selector}': {len(text)} characters")
+                        return text[:50000]
+
+            # Fall back to full body with aggressive noise stripping
             body = soup.find('body')
             if body:
-                for tag in body.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer', 'aside']):
+                for tag in body.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer',
+                                          'aside', 'button', 'form', 'input', 'select', 'label',
+                                          'iframe', 'figure', 'picture']):
                     tag.decompose()
 
-                body_text = body.get_text(separator=' ', strip=True)
+                for cls in ['breadcrumb', 'cookie', 'modal', 'overlay', 'pagination',
+                            'menu', 'toolbar', 'banner', 'sidebar', 'alert']:
+                    for tag in body.find_all(class_=lambda c: c and cls in ' '.join(c).lower()):
+                        tag.decompose()
+
+                body_text = re.sub(r'\s+', ' ', body.get_text(separator=' ', strip=True)).strip()
                 if len(body_text) > 100:
-                    self.logger.info(f"  Extracted job description: {len(body_text)} characters")
-                    return body_text
+                    self.logger.info(f"  Extracted job description from body: {len(body_text)} characters")
+                    return body_text[:50000]
 
             self.logger.warning(f"  No meaningful job description found")
-            return html_content
+            return html_content[:50000]
 
         except Exception as e:
             self.logger.warning(f"Error extracting job description: {e}")
-            return html_content
+            return html_content[:50000]
 
     def cleanup(self):
         """Close the WebDriver"""
