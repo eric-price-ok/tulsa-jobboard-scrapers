@@ -14,6 +14,7 @@ from utils.posting_operations import store_job_listing, load_active_jobs_cache, 
 from utils.utility_methods import setup_logging
 from utils.company_operations import get_company_config_by_name
 from utils.db_connection import get_database_connection
+from utils.location_utilities import get_city_id
 from datetime import datetime
 import logging
 from typing import Dict, List, Optional
@@ -45,23 +46,24 @@ class DatabaseManager:
     def store_job_listing(self, job_data: Dict, company_id: int) -> int:
         """Store new job listing using posting_operations"""
         with self.conn.cursor() as cursor:
-            # Simple mapping for Jenks jobs - default to basic values
+            cursor.execute("SELECT id FROM functions WHERE name = 'Other'")
+            other_function = cursor.fetchone()
             enhanced_job_data = job_data.copy()
             enhanced_job_data.update({
-                'job_type_id': None,  # No job type info available
-                'function': 32,  # Default to 'Other' function ID
-                'office_location_id': 1,  # Default to 'In Office'
-                'city_id': 8  # City of Jenks
+                'job_type_id': None,
+                'function': other_function['id'] if other_function else None,
+                'office_location_id': 1,  # Default to In Office for government jobs
+                'city_id': get_city_id(cursor, 'Jenks')
             })
-        
+
             return store_job_listing(cursor, enhanced_job_data, company_id, 'City of Jenks')
 
     def update_company_scrape_completed(self, company_id: int):
         """Update last_full_scrape_completed timestamp for company"""
         with self.conn.cursor() as cursor:
             cursor.execute("""
-                UPDATE Company 
-                SET last_full_scrape_completed = CURRENT_TIMESTAMP 
+                UPDATE company
+                SET last_full_scrape_completed = CURRENT_TIMESTAMP
                 WHERE id = %s
             """, (company_id,))
             self.logger.info(f"Updated last_full_scrape_completed for company {company_id}")
@@ -70,8 +72,8 @@ class DatabaseManager:
         """Log scraping results"""
         with self.conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO ScrapingLog (
-                    job_board, jobs_found, jobs_added, jobs_updated, 
+                INSERT INTO scrapinglog (
+                    job_board, jobs_found, jobs_added, jobs_updated,
                     jobs_skipped, errors, status
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (
