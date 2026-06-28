@@ -5,12 +5,14 @@ City of Bixby Job Board Scraper
 Handles City of Bixby job board with Selenium for full job description extraction
 """
 
+from utils.selenium_config import SeleniumConfig
+from utils.posting_operations import store_job_listing, load_active_jobs_cache, check_job_in_cache, update_job_verified_timestamp, mark_stale_jobs_closed
 from utils.utility_methods import setup_logging
-from utils.company_operations import get_or_create_company, get_company_config_by_name
+from utils.company_operations import get_company_config_by_name
 from utils.db_connection import get_database_connection
 from utils.date_utilities import normalize_date_string
+from utils.location_utilities import get_city_id
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
@@ -28,78 +30,36 @@ class DatabaseManager:
     
     def __init__(self, connection_string: str = None):
         self.conn = get_database_connection()
-        self.active_jobs_cache = {}  # Cache for active jobs by company
+        self.active_jobs_cache = {}
+        self.logger = None
     
     def load_active_jobs_cache(self, company_id: int):
-        """Load and cache all active jobs for the company to reduce database reads"""
+        """Load and cache all active jobs for the company"""
         with self.conn.cursor() as cursor:
-            cursor.execute("""
-                SELECT id, posting_url 
-                FROM JobListings 
-                WHERE company_id = %s AND job_status_id = 1
-            """, (company_id,))
-            
-            results = cursor.fetchall()
-            self.active_jobs_cache = {job['posting_url']: job['id'] for job in results}
-            self.logger.info(f"Cached {len(self.active_jobs_cache)} active jobs for company {company_id}")
+            self.active_jobs_cache = load_active_jobs_cache(cursor, company_id)
     
     def check_existing_job(self, job_url: str) -> Optional[int]:
-        """Check if job URL exists in cache, update timestamp if found"""
-        if job_url in self.active_jobs_cache:
-            job_id = self.active_jobs_cache[job_url]
-            # Update the updated_at timestamp
-            with self.conn.cursor() as cursor:
-                cursor.execute("""
-                    UPDATE JobListings 
-                    SET updated_at = CURRENT_TIMESTAMP 
-                    WHERE id = %s
-                """, (job_id,))
-            self.logger.info(f"  Job already exists (ID: {job_id}), updated timestamp")
-            return job_id
-        return None
+        """Check if job URL already exists using cache"""
+        return check_job_in_cache(job_url, self.active_jobs_cache)
+
+    def update_job_verified_timestamp(self, job_id: int):
+        """Update timestamp for a job that was verified to still exist"""
+        with self.conn.cursor() as cursor:
+            update_job_verified_timestamp(cursor, job_id)
     
     def store_job_listing(self, job_data: Dict, company_id: int) -> int:
-        """Store new job listing, return job listing ID"""
+        """Store new job listing using posting_operations"""
         with self.conn.cursor() as cursor:
-            # Map categorical fields
-            job_type_id = self._map_job_type(job_data.get('position_type', ''))
-            function = self._map_job_function(job_data.get('job_title', ''))
-            office_location_id = 1  # Default to "In Office" for government jobs
-            
-            # Insert new job
-            cursor.execute("""
-                INSERT INTO JobListings (
-                    company_id, job_title, job_description, posting_url, posting_id,
-                    source_job_board, date_posted, scraping_hash, 
-                    function, city_id, job_type_id, office_location_id,
-                    approved, job_status_id, 
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                         (SELECT id FROM JobStatus WHERE name = 'Active'))
-                RETURNING id
-            """, (
-                company_id,
-                job_data['job_title'],
-                job_data['job_description'],
-                job_data['posting_url'],
-                job_data['posting_id'],
-                'City of Bixby',
-                job_data['date_posted'],
-                job_data['scraping_hash'],
-                function,
-                3,
-                job_type_id,
-                office_location_id,
-                True
-            ))
-            
-            result = cursor.fetchone()
-            job_id = result['id']
-            self.logger.info(f"Created new job: {job_data['job_title']} (ID: {job_id})")
-            
-            # Add to cache
-            self.active_jobs_cache[job_data['posting_url']] = job_id
-            
-            return job_id
+            city_id = get_city_id(cursor, 'Bixby')
+            enhanced_job_data = job_data.copy()
+            enhanced_job_data.update({
+                'company_id': company_id,
+                'job_type_id': self._map_job_type(job_data.get('position_type', '')),
+                'function': self._map_job_function(job_data.get('job_title', '')),
+                'office_location_id': 1,  # Default to In Office for government jobs
+                'city_id': city_id
+            })
+            return store_job_listing(cursor, enhanced_job_data, company_id, 'City of Bixby')
     
     def _map_job_type(self, position_type: str) -> Optional[int]:
         """Map position type to job_type_id using LIKE matching"""
@@ -110,7 +70,7 @@ class DatabaseManager:
         
         with self.conn.cursor() as cursor:
             # Try exact match first
-            cursor.execute("SELECT id FROM JobType WHERE LOWER(name) LIKE %s", (f"%{position_type_lower}%",))
+            cursor.execute("SELECT id FROM jobtype WHERE LOWER(name) LIKE %s", (f"%{position_type_lower}%",))
             result = cursor.fetchone()
             if result:
                 self.logger.info(f"  Mapped '{position_type}' to job type ID: {result['id']}")
@@ -125,7 +85,7 @@ class DatabaseManager:
             
             for job_type_key, variations in position_mappings.items():
                 if any(var in position_type_lower for var in variations):
-                    cursor.execute("SELECT id FROM JobType WHERE LOWER(name) LIKE %s", (f"%{job_type_key}%",))
+                    cursor.execute("SELECT id FROM jobtype WHERE LOWER(name) LIKE %s", (f"%{job_type_key}%",))
                     result = cursor.fetchone()
                     if result:
                         self.logger.info(f"  Mapped '{position_type}' to job type ID: {result['id']} via '{job_type_key}'")
@@ -134,15 +94,11 @@ class DatabaseManager:
         self.logger.warning(f"  Could not map '{position_type}' to any job type")
         return None
     
-    def _map_job_function(self, job_title: str) -> int:
-        """Map job title to function, default to 'Other' (ID 32)"""
-        if not job_title:
-            return 32
-            
-        job_title_lower = job_title.lower()
-        
+    def _map_job_function(self, job_title: str) -> Optional[int]:
+        """Map job title to function with government-specific mappings, default to 'Other'"""
+        job_title_lower = (job_title or '').lower()
+
         with self.conn.cursor() as cursor:
-            # Try keyword-based mapping for government positions
             function_keywords = {
                 'Information Technology': ['technology', 'it', 'software', 'tech', 'data', 'systems', 'computer', 'network'],
                 'Engineering': ['engineering', 'engineer', 'civil', 'mechanical', 'electrical'],
@@ -159,65 +115,41 @@ class DatabaseManager:
                 'Healthcare Provider': ['nurse', 'medical', 'healthcare', 'clinical'],
                 'Skilled Labor': ['operator', 'technician', 'maintenance', 'mechanic', 'welder', 'electrician']
             }
-            
-            for function_name, keywords in function_keywords.items():
-                if any(keyword in job_title_lower for keyword in keywords):
-                    cursor.execute("SELECT id FROM Functions WHERE name = %s", (function_name,))
-                    result = cursor.fetchone()
-                    if result:
-                        self.logger.info(f"  Mapped '{job_title}' to function ID: {result['id']} via '{function_name}'")
-                        return result['id']
-        
-        self.logger.info(f"  Mapped '{job_title}' to default function: Other (ID: 32)")
-        return 32
+
+            if job_title_lower:
+                for function_name, keywords in function_keywords.items():
+                    if any(keyword in job_title_lower for keyword in keywords):
+                        cursor.execute("SELECT id FROM functions WHERE name = %s", (function_name,))
+                        result = cursor.fetchone()
+                        if result:
+                            self.logger.info(f"  Mapped '{job_title}' to function: {function_name}")
+                            return result['id']
+
+            cursor.execute("SELECT id FROM functions WHERE name = 'Other'")
+            result = cursor.fetchone()
+            if result:
+                self.logger.info(f"  Mapped '{job_title}' to default function: Other")
+                return result['id']
+
+        self.logger.warning(f"  'Other' function not found in database")
+        return None
     
     def update_company_scrape_completed(self, company_id: int):
         """Update last_full_scrape_completed timestamp for company"""
         with self.conn.cursor() as cursor:
             cursor.execute("""
-                UPDATE Company 
-                SET last_full_scrape_completed = CURRENT_TIMESTAMP 
+                UPDATE company
+                SET last_full_scrape_completed = CURRENT_TIMESTAMP
                 WHERE id = %s
             """, (company_id,))
             self.logger.info(f"Updated last_full_scrape_completed for company {company_id}")
-    
-    def mark_stale_jobs_closed(self, company_id: int):
-        """Mark jobs as closed if not updated during this scrape cycle"""
-        with self.conn.cursor() as cursor:
-            # Get the last full scrape completion date
-            cursor.execute("""
-                SELECT last_full_scrape_completed 
-                FROM Company 
-                WHERE id = %s
-            """, (company_id,))
-            
-            company_data = cursor.fetchone()
-            if not company_data or not company_data['last_full_scrape_completed']:
-                self.logger.warning(f"No last_full_scrape_completed date found for company {company_id}")
-                return
-            
-            last_scrape_date = company_data['last_full_scrape_completed']
-            
-            # Close jobs that weren't updated in this scrape cycle
-            cursor.execute("""
-                UPDATE JobListings SET 
-                    job_status_id = 6,
-                    date_closed = CURRENT_DATE
-                WHERE company_id = %s 
-                AND job_status_id != 6
-                AND updated_at < %s
-            """, (company_id, last_scrape_date))
-            
-            closed_count = cursor.rowcount
-            if closed_count > 0:
-                self.logger.info(f"Marked {closed_count} stale jobs as closed (status_id = 6)")
     
     def log_scraping_activity(self, job_board: str, stats: Dict):
         """Log scraping results"""
         with self.conn.cursor() as cursor:
             cursor.execute("""
-                INSERT INTO ScrapingLog (
-                    job_board, jobs_found, jobs_added, jobs_updated, 
+                INSERT INTO scrapinglog (
+                    job_board, jobs_found, jobs_added, jobs_updated,
                     jobs_skipped, errors, status
                 ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (
@@ -242,61 +174,17 @@ class SeleniumJobScraper:
     def setup_driver(self):
         """Initialize Chrome WebDriver with optimized options"""
         try:
-            chrome_options = Options()
-            if self.headless:
-                chrome_options.add_argument('--headless=new')
-            
-            # Performance optimizations
-            chrome_options.add_argument('--no-sandbox')
-            chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
-            chrome_options.add_argument('--disable-images')  # Don't load images
-            chrome_options.add_argument('--disable-javascript-harmony-shipping')
-            chrome_options.add_argument('--disable-extensions')
-            chrome_options.add_argument('--disable-plugins')
-            chrome_options.add_argument('--disable-preconnect')
-            chrome_options.add_argument('--disable-sync')
-            chrome_options.add_argument('--disable-background-timer-throttling')
-            chrome_options.add_argument('--disable-renderer-backgrounding')
-            chrome_options.add_argument('--disable-backgrounding-occluded-windows')
-            chrome_options.add_argument('--disable-client-side-phishing-detection')
-            chrome_options.add_argument('--disable-default-apps')
-            chrome_options.add_argument('--disable-hang-monitor')
-            chrome_options.add_argument('--disable-popup-blocking')
-            chrome_options.add_argument('--disable-prompt-on-repost')
-            chrome_options.add_argument('--disable-web-security')
-            chrome_options.add_argument('--window-size=1280,720')
-            
-            # Disable logging and error messages
-            chrome_options.add_argument('--log-level=3')
-            chrome_options.add_argument('--silent')
-            chrome_options.add_argument('--disable-logging')
-            chrome_options.add_experimental_option('excludeSwitches', ['enable-logging', 'enable-automation'])
-            chrome_options.add_experimental_option('useAutomationExtension', False)
-            
-            # Set page load strategy to eager
-            chrome_options.page_load_strategy = 'eager'
-            
-            chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
-            
-            # Try to find chromedriver
+            chrome_options = SeleniumConfig.get_chrome_options(self.headless)
+
             try:
                 self.driver = webdriver.Chrome(options=chrome_options)
             except:
                 self.driver = webdriver.Chrome('./chromedriver.exe', options=chrome_options)
-            
-            # Reduce implicit wait time
-            self.driver.implicitly_wait(5)
-            
-            # Set timeouts
-            self.driver.set_page_load_timeout(15)
-            self.driver.set_script_timeout(10)
-            
-            # Execute script to remove automation detection
-            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            
+
+            SeleniumConfig.setup_driver_timeouts(self.driver)
+
             self.logger.info("Optimized Selenium WebDriver initialized")
-            
+
         except Exception as e:
             self.logger.error(f"Failed to initialize WebDriver: {e}")
             raise
@@ -409,45 +297,57 @@ class SeleniumJobScraper:
         """Extract job description and position type from HTML content"""
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
-            
-            # Remove scripts, styles, navigation
-            for tag in soup.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer']):
-                tag.decompose()
-            
-            # Get body content for job description
-            body = soup.find('body')
-            job_description = ""
             position_type = None
-            
+
+            def extract_position_type(text):
+                m = re.search(r'Position Type[:\s]+([^\n\r]+)', text, re.IGNORECASE)
+                if m:
+                    return re.sub(r'\s*(Department|Location|Salary).*$', '', m.group(1).strip(), flags=re.IGNORECASE)
+                return None
+
+            # Try targeted containers first
+            for selector in [
+                'div.job-description',
+                'section.job-description',
+                'div#job-description',
+                'div.description',
+                'article',
+                'main',
+                'div[role="main"]',
+            ]:
+                container = soup.select_one(selector)
+                if container:
+                    text = re.sub(r'\s+', ' ', container.get_text(separator=' ', strip=True)).strip()
+                    if len(text) > 100:
+                        position_type = extract_position_type(text)
+                        self.logger.info(f"  Extracted job description via '{selector}': {len(text)} characters")
+                        return {'job_description': text[:50000], 'position_type': position_type}
+
+            # Fall back to full body with aggressive noise stripping
+            body = soup.find('body')
             if body:
-                # Remove common non-content elements
-                for tag in body.find_all(['script', 'style', 'nav', 'header', 'footer', 'aside']):
+                for tag in body.find_all(['script', 'style', 'noscript', 'nav', 'header', 'footer',
+                                          'aside', 'button', 'form', 'input', 'select', 'label',
+                                          'iframe', 'figure', 'picture']):
                     tag.decompose()
-                
-                body_text = body.get_text(separator=' ', strip=True)
+
+                for cls in ['breadcrumb', 'cookie', 'modal', 'overlay', 'pagination',
+                            'menu', 'toolbar', 'banner', 'sidebar', 'alert']:
+                    for tag in body.find_all(class_=lambda c: c and cls in ' '.join(c).lower()):
+                        tag.decompose()
+
+                body_text = re.sub(r'\s+', ' ', body.get_text(separator=' ', strip=True)).strip()
                 if len(body_text) > 100:
-                    job_description = body_text
-                    self.logger.info(f"  Extracted job description: {len(job_description)} characters")
-                
-                # Extract Position Type
-                position_type_match = re.search(r'Position Type[:\s]+([^\n\r]+)', body_text, re.IGNORECASE)
-                if position_type_match:
-                    position_type = position_type_match.group(1).strip()
-                    # Clean up common suffixes
-                    position_type = re.sub(r'\s*(Department|Location|Salary).*$', '', position_type, flags=re.IGNORECASE)
-                    self.logger.info(f"  Extracted Position Type: {position_type}")
-            
-            return {
-                'job_description': job_description or html_content,
-                'position_type': position_type
-            }
-            
+                    position_type = extract_position_type(body_text)
+                    self.logger.info(f"  Extracted job description from body: {len(body_text)} characters")
+                    return {'job_description': body_text[:50000], 'position_type': position_type}
+
+            self.logger.warning(f"  No meaningful job description found")
+            return {'job_description': html_content[:50000], 'position_type': None}
+
         except Exception as e:
             self.logger.warning(f"Error extracting job details: {e}")
-            return {
-                'job_description': html_content,
-                'position_type': None
-            }
+            return {'job_description': html_content[:50000], 'position_type': None}
     
     def cleanup(self):
         """Close the WebDriver"""
@@ -476,9 +376,6 @@ class BixbyJobScraper:
         self.db.logger = self.logger
 
         self.selenium_scraper = SeleniumJobScraper(headless=True, logger=self.logger)
-        
-        # Load active jobs cache
-        self.db.load_active_jobs_cache(self.company_id)
 
     def create_scraping_hash(self, job_data: Dict) -> str:
         """Create hash for duplicate detection"""
@@ -498,7 +395,11 @@ class BixbyJobScraper:
         try:
             # Step 1: Company already retrieved during initialization
             self.logger.info("Step 1: Using company from database")
-            
+
+            # Step 1.5: Load active jobs cache
+            self.logger.info("Step 1.5: Loading active jobs cache...")
+            self.db.load_active_jobs_cache(self.company_id)
+
             # Step 2: Get job listings from job board
             self.logger.info("Step 2: Getting job listings from Bixby job board...")
             job_listings = self.selenium_scraper.get_job_listings(self.company_config['jobboard'])
@@ -516,6 +417,7 @@ class BixbyJobScraper:
                     # Check if job already exists using cache
                     existing_job_id = self.db.check_existing_job(job_metadata['posting_url'])
                     if existing_job_id:
+                        self.db.update_job_verified_timestamp(existing_job_id)
                         stats['updated'] += 1
                         continue
                     
@@ -562,7 +464,8 @@ class BixbyJobScraper:
             
             # Step 4: Mark stale jobs as closed
             self.logger.info("Step 4: Marking stale jobs as closed...")
-            self.db.mark_stale_jobs_closed(self.company_id)
+            with self.db.conn.cursor() as cursor:
+                mark_stale_jobs_closed(cursor, self.company_id, self.logger)
             
             # Step 5: Update company scrape completion
             self.logger.info("Step 5: Updating company scrape completion...")
