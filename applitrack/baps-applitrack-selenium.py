@@ -143,9 +143,14 @@ class SeleniumJobScraper:
             logger.info(f"Loading page: {url}")
             self.driver.get(url)
 
-            wait = WebDriverWait(self.driver, 20)
-            wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-            time.sleep(2)
+            wait = WebDriverWait(self.driver, 30)
+            # Wait for at least one job listing element to be present
+            try:
+                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "ul.postingsList")))
+                logger.info("Job listings detected in DOM")
+            except TimeoutException:
+                logger.warning("Timed out waiting for postingsList; proceeding with current page state")
+            time.sleep(3)
 
             page_source = self.driver.page_source
             logger.info(f"Retrieved page source: {len(page_source)} characters")
@@ -272,9 +277,19 @@ class BrokenArrowJobScraper:
                 result = cursor.fetchone()
                 default_office_location_id = result['id'] if result else None
 
+                # Ensure the listing URL shows all jobs (Applitrack paginates without ?all=1).
+                # Use a separate variable so job detail URLs are still built from the stored base URL,
+                # which must match whatever format was used when the existing 131 jobs were inserted.
+                if 'all=1' not in job_board_url:
+                    separator = '&' if '?' in job_board_url else '?'
+                    listing_url = f"{job_board_url}{separator}all=1"
+                    logger.info(f"  Appended all=1 to listing URL: {listing_url}")
+                else:
+                    listing_url = job_board_url
+
                 # Step 2: Load listings page
                 logger.info("Step 2: Loading job listings page...")
-                page_content = self.selenium_scraper.get_page_content(job_board_url)
+                page_content = self.selenium_scraper.get_page_content(listing_url)
                 if not page_content:
                     raise Exception("Failed to load job listings page")
 
