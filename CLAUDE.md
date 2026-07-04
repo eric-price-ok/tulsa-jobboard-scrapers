@@ -65,6 +65,7 @@ Each scraper targets one company on one job board platform. Scrapers are organiz
 - `paylocity/` — Paylocity (requests + BeautifulSoup, no Selenium)
 - `applitrack/` — Applitrack/Frontline (Selenium + DOCX/PDF document extraction via `mammoth`/`PyPDF2`)
 - `ultipro/` — UltiPro/UKG (Selenium, `data-automation` selectors)
+- `lever/` — Lever (requests + BeautifulSoup, no Selenium — public unauthenticated JSON API at `api.lever.co/v0/postings/<slug>?mode=json`, even when the visible careers page is a branded widget on another domain)
 - `custom/` — One-off scrapers for company-specific job boards
 
 Each folder contains a `template-*.py` that shows the expected pattern for new scrapers on that platform.
