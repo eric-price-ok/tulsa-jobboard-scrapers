@@ -211,26 +211,28 @@ class SeleniumJobScraper:
 
     def _extract_row_metadata(self, row, row_number: int) -> Optional[Dict]:
         try:
-            title_link = row.find_element(By.CSS_SELECTOR, '.jobdetail-phone.visible-phone .jobTitle-link')
+            title_link = row.find_element(By.CSS_SELECTOR, 'td.colTitle a.jobTitle-link')
             job_title = title_link.text.strip()
             href = title_link.get_attribute('href')
             posting_url = urljoin('https://careers.quiktrip.com/', href) if href else None
 
             try:
-                date_element = row.find_element(By.CSS_SELECTOR, '.jobDate.visible-phone')
+                date_element = row.find_element(By.CSS_SELECTOR, 'span.JobDate')
                 date_raw = date_element.text.strip()
             except NoSuchElementException:
                 date_raw = None
 
             try:
-                location_element = row.find_element(By.CSS_SELECTOR, '.jobLocation')
+                location_element = row.find_element(By.CSS_SELECTOR, 'span.jobLocation')
                 location_raw = location_element.text.strip()
             except NoSuchElementException:
                 location_raw = ''
 
-            # find_served_city lowercases both sides, so "TULSA, OK, US, 74116"
-            # matches the served city name regardless of casing.
-            city_name = find_served_city(location_raw)
+            # Location reads like "TULSA, OK, US, 74134" — only the city (first
+            # segment) is compared against the served-cities table. find_served_city
+            # lowercases both sides, so casing (e.g. all-caps "TULSA") doesn't matter.
+            city_segment = location_raw.split(',')[0].strip() if location_raw else ''
+            city_name = find_served_city(city_segment)
 
             logger.info(f"Row {row_number}: {job_title} - {location_raw} - {date_raw}")
             return {
