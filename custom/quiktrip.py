@@ -3,12 +3,17 @@
 quiktrip.py
 QuikTrip custom job board scraper (Gen 2)
 
-QuikTrip's search page returns jobs across many cities (not just the searched
-one), so every row's jobLocation is matched against the served-cities table
-and non-served jobs are skipped. The results list also appears to load a
-fixed batch (25) with no visible next/load-more control, so the scraper
-scrolls repeatedly and stops once the row count stops growing, to also
-tolerate the page turning out to be infinite-scroll after all.
+The search page is plain server-rendered HTML (a <table> of <tr class="data-row">
+rows) — no JavaScript rendering required, so this uses requests/BeautifulSoup
+instead of Selenium. Each result row duplicates its title/date/location markup
+twice: once in td.colTitle's hidden "jobdetail-phone visible-phone" div (a
+mobile-only copy, empty when rendered on desktop) and once in the real
+td.colDate / td.colLocation cells. Selectors here are scoped to the latter to
+avoid picking up the empty mobile duplicate.
+
+QuikTrip's search returns jobs across many cities (not just the searched one),
+so every row's location is matched against the served-cities table and
+non-served jobs are skipped.
 """
 
 from utils.db_connection import get_database_connection, close_connection
@@ -19,18 +24,13 @@ from utils.posting_operations import (
 from utils.company_operations import get_company_config_by_name
 from utils.date_utilities import normalize_date_string
 from utils.location_utilities import find_served_city, get_city_id
-from utils.selenium_config import SeleniumConfig
 from utils.utility_methods import setup_logging
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from urllib.parse import urljoin
 import time
 import hashlib
 import re
+import requests
 from bs4 import BeautifulSoup
 from typing import Dict, List, Optional
 
@@ -38,6 +38,7 @@ logger = setup_logging('QuikTrip')
 
 COMPANY_NAME = 'QuikTrip'
 SOURCE_JOB_BOARD = 'QT Custom Scraper'
+BASE_URL = 'https://careers.quiktrip.com/'
 
 # QuikTrip is primarily convenience-store retail, but also staffs corporate
 # office functions (IT, accounting, etc.), warehouses, and its own trucking fleet.
@@ -137,141 +138,95 @@ def _log_scraping_activity(cursor, company_id: int, stats: Dict):
     ))
 
 
-class SeleniumJobScraper:
+def _extract_row_metadata(row) -> Optional[Dict]:
+    """Parse a single <tr class="data-row">. Title comes from the desktop
+    (hidden-phone) copy in td.colTitle; date/location come from the sibling
+    td.colDate / td.colLocation cells — the ONLY place they appear outside
+    the empty mobile duplicate nested inside td.colTitle."""
+    try:
+        title_link = row.select_one('td.colTitle span.jobTitle.hidden-phone a.jobTitle-link')
+        if not title_link:
+            title_link = row.select_one('td.colTitle a.jobTitle-link')
+        if not title_link:
+            return None
+        job_title = title_link.get_text(strip=True)
+        href = title_link.get('href')
+        posting_url = urljoin(BASE_URL, href) if href else None
 
-    def __init__(self, headless=True):
-        self.driver = None
-        self.headless = headless
-        self.setup_driver()
+        date_element = row.select_one('td.colDate span.jobDate')
+        date_raw = date_element.get_text(strip=True) if date_element else None
 
-    def setup_driver(self):
-        try:
-            chrome_options = SeleniumConfig.get_chrome_options(self.headless)
-            try:
-                self.driver = webdriver.Chrome(options=chrome_options)
-            except Exception:
-                self.driver = webdriver.Chrome('./chromedriver.exe', options=chrome_options)
-            SeleniumConfig.setup_driver_timeouts(self.driver)
-            logger.info("Selenium WebDriver initialized")
-        except Exception as e:
-            logger.error(f"Failed to initialize WebDriver: {e}")
-            raise
+        location_element = row.select_one('td.colLocation span.jobLocation')
+        location_raw = location_element.get_text(separator=' ', strip=True) if location_element else ''
+
+        # Location reads like "TULSA, OK, US, 74134 +17 more…" — only the city
+        # (first comma segment) is compared against the served-cities table.
+        # find_served_city lowercases both sides, so all-caps "TULSA" matches fine.
+        city_segment = location_raw.split(',')[0].strip() if location_raw else ''
+        city_name = find_served_city(city_segment)
+
+        logger.info(f"Row: {job_title} - {location_raw} - {date_raw}")
+        return {
+            'job_title': job_title,
+            'posting_url': posting_url,
+            'date_posted_raw': date_raw,
+            'date_posted': normalize_date_string(date_raw) if date_raw else None,
+            'location_raw': location_raw,
+            'city_name': city_name,
+        }
+    except Exception as e:
+        logger.error(f"Error extracting row metadata: {e}")
+        return None
+
+
+class QuikTripScraper:
+
+    def __init__(self, conn):
+        self.conn = conn
+        with self.conn.cursor() as cursor:
+            self.company_config = get_company_config_by_name(cursor, COMPANY_NAME)
+        if not self.company_config:
+            raise ValueError(f"Company '{COMPANY_NAME}' not found in database")
+        self.company_id = self.company_config['id']
+
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'DNT': '1',
+        })
 
     def get_job_listings(self, jobboard_url: str) -> List[Dict]:
-        """Load the search page and collect every data-row, scrolling until the
-        row count stops growing (handles both a static 25-result page and a
-        possible infinite-scroll page without knowing which it is)."""
         try:
-            logger.info(f"Loading job board: {jobboard_url}")
-            self.driver.get(jobboard_url)
+            logger.info(f"Fetching job board: {jobboard_url}")
+            response = self.session.get(jobboard_url, timeout=20)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-            wait = WebDriverWait(self.driver, 20)
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.contentQuikTrip')))
-            time.sleep(1.5)
-
-            last_count = -1
-            stable_rounds = 0
-            max_rounds = 20
-            for _ in range(max_rounds):
-                rows = self.driver.find_elements(By.CSS_SELECTOR, 'div.contentQuikTrip .data-row')
-                current_count = len(rows)
-                if current_count == last_count:
-                    stable_rounds += 1
-                    if stable_rounds >= 2:
-                        break
-                else:
-                    stable_rounds = 0
-                last_count = current_count
-                self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(1.5)
-
-            row_elements = self.driver.find_elements(By.CSS_SELECTOR, 'div.contentQuikTrip .data-row')
+            row_elements = soup.select('tr.data-row')
             logger.info(f"Found {len(row_elements)} job rows")
             if len(row_elements) == 25:
                 logger.warning("Exactly 25 rows found — verify this isn't a page-size cap on the live site")
 
             jobs = []
-            for i, row in enumerate(row_elements):
-                try:
-                    job_data = self._extract_row_metadata(row, i + 1)
-                    if job_data:
-                        jobs.append(job_data)
-                except Exception as e:
-                    logger.error(f"Error extracting row {i + 1}: {e}")
+            for row in row_elements:
+                job_data = _extract_row_metadata(row)
+                if job_data:
+                    jobs.append(job_data)
 
             logger.info(f"Successfully extracted {len(jobs)} job listings")
             return jobs
-
-        except TimeoutException:
-            logger.error("Timeout waiting for job listings to load")
-            return []
         except Exception as e:
             logger.error(f"Error loading job board: {e}")
             return []
 
-    def _extract_row_metadata(self, row, row_number: int) -> Optional[Dict]:
+    def get_job_description(self, job_url: str) -> str:
         try:
-            title_link = row.find_element(By.CSS_SELECTOR, 'td.colTitle a.jobTitle-link')
-            job_title = title_link.text.strip()
-            href = title_link.get_attribute('href')
-            posting_url = urljoin('https://careers.quiktrip.com/', href) if href else None
-
-            try:
-                date_element = row.find_element(By.CSS_SELECTOR, 'span.JobDate')
-                date_raw = date_element.text.strip()
-            except NoSuchElementException:
-                date_raw = None
-
-            try:
-                location_element = row.find_element(By.CSS_SELECTOR, 'span.jobLocation')
-                location_raw = location_element.text.strip()
-            except NoSuchElementException:
-                location_raw = ''
-
-            # Location reads like "TULSA, OK, US, 74134" — only the city (first
-            # segment) is compared against the served-cities table. find_served_city
-            # lowercases both sides, so casing (e.g. all-caps "TULSA") doesn't matter.
-            city_segment = location_raw.split(',')[0].strip() if location_raw else ''
-            city_name = find_served_city(city_segment)
-
-            logger.info(f"Row {row_number}: {job_title} - {location_raw} - {date_raw}")
-            return {
-                'job_title': job_title,
-                'posting_url': posting_url,
-                'date_posted_raw': date_raw,
-                'date_posted': normalize_date_string(date_raw) if date_raw else None,
-                'location_raw': location_raw,
-                'city_name': city_name,
-            }
-        except Exception as e:
-            logger.error(f"Error extracting metadata for row {row_number}: {e}")
-            return None
-
-    def get_job_content(self, job_url: str, timeout=12) -> str:
-        try:
-            logger.info("  Loading job page with Selenium...")
-            self.driver.get(job_url)
-            wait = WebDriverWait(self.driver, timeout)
-            try:
-                wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-            except TimeoutException:
-                logger.warning("  Body tag not found within timeout")
-                return ""
-            try:
-                wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, 'div.jobDisplay')))
-            except TimeoutException:
-                pass
-            time.sleep(1.0)
-            page_source = self.driver.page_source
-            logger.info(f"  Retrieved page source: {len(page_source)} characters")
-            return page_source
-        except Exception as e:
-            logger.error(f"  Error loading job page: {e}")
-            return self.driver.page_source if self.driver else ""
-
-    def extract_job_description(self, html_content: str) -> str:
-        try:
-            soup = BeautifulSoup(html_content, 'html.parser')
+            logger.info(f"  Fetching job detail page: {job_url}")
+            response = self.session.get(job_url, timeout=20)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
 
             container = soup.select_one('div.jobDisplay')
             if container:
@@ -301,28 +256,8 @@ class SeleniumJobScraper:
             logger.warning("  No meaningful job description found")
             return ""
         except Exception as e:
-            logger.warning(f"Error extracting job description: {e}")
+            logger.error(f"  Error fetching job detail page: {e}")
             return ""
-
-    def cleanup(self):
-        if self.driver:
-            try:
-                self.driver.quit()
-                logger.info("WebDriver closed")
-            except Exception:
-                pass
-
-
-class QuikTripScraper:
-
-    def __init__(self, conn):
-        self.conn = conn
-        with self.conn.cursor() as cursor:
-            self.company_config = get_company_config_by_name(cursor, COMPANY_NAME)
-        if not self.company_config:
-            raise ValueError(f"Company '{COMPANY_NAME}' not found in database")
-        self.company_id = self.company_config['id']
-        self.selenium_scraper = SeleniumJobScraper(headless=True)
 
     def create_scraping_hash(self, title: str, url: str, description: str) -> str:
         return hashlib.md5(f"{title}{url}{description}".encode('utf-8')).hexdigest()
@@ -336,7 +271,7 @@ class QuikTripScraper:
                 active_jobs_cache = load_active_jobs_cache(cursor, self.company_id)
 
                 logger.info("Step 2: Getting job listings from QuikTrip search page...")
-                all_jobs = self.selenium_scraper.get_job_listings(self.company_config['jobboard'])
+                all_jobs = self.get_job_listings(self.company_config['jobboard'])
                 if not all_jobs:
                     raise Exception("No jobs retrieved from job board")
                 stats['found'] = len(all_jobs)
@@ -370,8 +305,7 @@ class QuikTripScraper:
                             stats['updated'] += 1
                             continue
 
-                        html = self.selenium_scraper.get_job_content(job['posting_url'])
-                        description = self.selenium_scraper.extract_job_description(html) if html else ""
+                        description = self.get_job_description(job['posting_url'])
                         if not description or len(description.strip()) < 50:
                             logger.warning("  Failed to get meaningful job content, skipping")
                             stats['skipped'] += 1
@@ -390,7 +324,7 @@ class QuikTripScraper:
                         job_id = store_job_listing(cursor, job_data, self.company_id, SOURCE_JOB_BOARD)
                         logger.info(f"  Stored job ID: {job_id} (city: {job['city_name']})")
                         stats['added'] += 1
-                        time.sleep(0.5)
+                        time.sleep(0.3)
 
                     except Exception as e:
                         error_msg = f"Error processing '{job.get('job_title', 'Unknown')}': {e}"
@@ -415,8 +349,7 @@ class QuikTripScraper:
         return stats
 
     def cleanup(self):
-        if self.selenium_scraper:
-            self.selenium_scraper.cleanup()
+        self.session.close()
 
 
 def main():
