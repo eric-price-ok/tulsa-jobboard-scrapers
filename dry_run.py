@@ -54,8 +54,11 @@ _po.mark_stale_jobs_closed    = lambda cursor, company_id, logger=None: None  # 
 # so it isn't covered by the posting_operations patch above. Mock it so it
 # doesn't execute any SQL and can't abort the transaction.
 
-def _mock_get_or_create_company_site(cursor, company_id, location_name, city_id=None, logger=None):
-    print(f"  [DRY RUN] Would create companysite shortname='{location_name}' for company {company_id}")
+def _mock_get_or_create_company_site(cursor, company_id, location_name, city_id=None, logger=None,
+                                      address1=None, state_id=None, country_id=None, site_type_name=None):
+    extra = f", address1='{address1}'" if address1 else ""
+    extra += f", site_type='{site_type_name}'" if site_type_name else ""
+    print(f"  [DRY RUN] Would create companysite site_name='{location_name}' for company {company_id}{extra}")
     return None
 
 _co.get_or_create_company_site = _mock_get_or_create_company_site
