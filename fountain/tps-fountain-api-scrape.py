@@ -97,7 +97,7 @@ on virtually every record).
 
 from utils.db_connection import get_database_connection, close_connection
 from utils.posting_operations import (
-    store_job_listing, load_active_jobs_cache, check_job_in_cache,
+    store_job_listing, update_job_listing, load_active_jobs_cache, check_job_in_cache,
     update_job_verified_timestamp, mark_stale_jobs_closed,
 )
 from utils.company_operations import get_company_config_by_name
@@ -348,6 +348,17 @@ def _extract_pdf_text(file_path: str) -> str:
         return ""
 
 
+def _sniff_file_kind(content: bytes) -> Optional[str]:
+    """Identify a downloaded Drive file by magic bytes rather than trusting
+    Content-Type, which Drive's uc?export=download endpoint often reports
+    generically (e.g. application/octet-stream) for both PDFs and DOCX."""
+    if content[:5] == b'%PDF-':
+        return 'pdf'
+    if content[:2] == b'PK':  # DOCX/XLSX/etc. are zip containers
+        return 'docx'
+    return None
+
+
 def resolve_external_description(session: requests.Session, url: str) -> Optional[str]:
     """Resolve the "Full Job Description:" link to its text content.
 
@@ -377,19 +388,26 @@ def resolve_external_description(session: requests.Session, url: str) -> Optiona
             response = session.get(download_url, timeout=30)
             response.raise_for_status()
             content_type = response.headers.get('Content-Type', '').lower()
+            # Drive's download endpoint often reports a generic Content-Type
+            # for both PDFs and DOCX, so sniff the actual file signature
+            # first rather than guessing an extraction order and logging a
+            # spurious "Failed to extract" warning when the guess is wrong.
+            file_kind = _sniff_file_kind(response.content)
 
             with tempfile.NamedTemporaryFile(delete=False) as temp_file:
                 temp_file.write(response.content)
                 temp_path = temp_file.name
             try:
-                if 'pdf' in content_type:
+                if file_kind == 'pdf' or 'pdf' in content_type:
                     text = _extract_pdf_text(temp_path)
-                elif 'word' in content_type or 'officedocument' in content_type:
+                elif file_kind == 'docx' or 'word' in content_type or 'officedocument' in content_type:
                     text = _extract_docx_text(temp_path)
                 elif 'text/plain' in content_type:
                     text = response.text
                 else:
-                    text = _extract_docx_text(temp_path) or _extract_pdf_text(temp_path)
+                    logger.warning(f"  Could not identify Drive file type (content-type: '{content_type}'), "
+                                    f"trying PDF then DOCX extraction")
+                    text = _extract_pdf_text(temp_path) or _extract_docx_text(temp_path)
             finally:
                 try:
                     os.unlink(temp_path)
@@ -723,6 +741,17 @@ class TulsaPublicSchoolsScraper:
                         existing_job_id = check_job_in_cache(posting_url, active_jobs_cache)
                         if existing_job_id:
                             update_job_verified_timestamp(cursor, existing_job_id)
+                            # Re-run the cheap, no-network derived fields even for
+                            # jobs we don't re-scrape a description for. Without
+                            # this, a job's function/city/site stay frozen at
+                            # whatever they were the first time it was ever
+                            # inserted — so fixing a keyword mapping later would
+                            # never apply retroactively to already-seen jobs.
+                            update_job_listing(cursor, existing_job_id, {
+                                'function': _map_job_to_function(cursor, title, location_name),
+                                'city_id': city_id,
+                                'company_site_id': company_site_id,
+                            })
                             stats['updated'] += 1
                             continue
 
