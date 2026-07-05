@@ -11,6 +11,11 @@ Usage:
     python dry_run.py workday/williams-workday-api-selenium-scrape.py
     python dry_run.py workday/greenheck-workday-api-selenium-scrape.py
     python dry_run.py adp/ok-cancer-spec-adp-api-selenium.py
+
+    # Stop early after N jobs have been touched (captured as new, or
+    # confirmed existing) -- useful for a quick check on a slow scraper
+    # instead of waiting through every job (e.g. Selenium-per-job scrapers):
+    python dry_run.py fountain/tps-fountain-api-scrape.py --limit 3
 """
 
 import sys
@@ -29,9 +34,32 @@ from datetime import datetime
 
 _captured_jobs = []
 
+# Set from --limit; stops the scraper after this many jobs are touched
+# (captured as new via store_job_listing, or confirmed existing via
+# update_job_verified_timestamp). None means no limit.
+_JOB_LIMIT = None
+_jobs_touched = 0
+
 import utils.posting_operations as _po
 import utils.db_connection as _dbc
 import utils.company_operations as _co
+
+
+class _DryRunLimitReached(BaseException):
+    """Raised to unwind out of a scraper's processing loop once --limit is
+    hit. Deliberately inherits BaseException, not Exception, so it escapes
+    the per-job and per-scrape `except Exception` blocks that every Gen2
+    scraper wraps its loop in, rather than being swallowed as a per-job
+    error and silently continuing to the next job."""
+    pass
+
+
+def _count_toward_limit():
+    global _jobs_touched
+    _jobs_touched += 1
+    if _JOB_LIMIT and _jobs_touched >= _JOB_LIMIT:
+        print(f"[DRY RUN] Reached --limit {_JOB_LIMIT} job(s) touched — stopping early")
+        raise _DryRunLimitReached()
 
 
 # ── posting_operations patches ─────────────────────────────────────────────
@@ -43,11 +71,27 @@ def _mock_store_job_listing(cursor, job_data, company_id, source_job_board):
     _captured_jobs.append(entry)
     fake_id = -(len(_captured_jobs))
     print(f"  [DRY RUN] Captured: {entry.get('job_title', '?')} (would be id={fake_id})")
+    _count_toward_limit()
     return fake_id
 
-_po.store_job_listing         = _mock_store_job_listing
-_po.check_existing_job_by_url = lambda cursor, url: None          # treat all jobs as new
-_po.mark_stale_jobs_closed    = lambda cursor, company_id, logger=None: None  # no-op
+
+# Jobs a scraper finds already in the DB never reach store_job_listing, so
+# --limit would never trigger on a mostly-already-scraped run without also
+# counting this path. Runs the real implementation first (still safe -- the
+# whole connection is wrapped in a transaction that gets rolled back).
+_real_update_job_verified_timestamp = _po.update_job_verified_timestamp
+
+
+def _mock_update_job_verified_timestamp(cursor, job_id):
+    result = _real_update_job_verified_timestamp(cursor, job_id)
+    _count_toward_limit()
+    return result
+
+
+_po.store_job_listing               = _mock_store_job_listing
+_po.check_existing_job_by_url       = lambda cursor, url: None          # treat all jobs as new
+_po.mark_stale_jobs_closed          = lambda cursor, company_id, logger=None: None  # no-op
+_po.update_job_verified_timestamp   = _mock_update_job_verified_timestamp
 
 # ── company_operations patches ─────────────────────────────────────────────
 # get_or_create_company_site does an INSERT that is not a job listing write,
@@ -182,20 +226,42 @@ def _load_and_run(scraper_path: str):
 
 
 def main():
-    if len(sys.argv) < 2:
+    global _JOB_LIMIT
+
+    args = sys.argv[1:]
+    if not args:
         print(__doc__)
         return 1
 
-    scraper_path = sys.argv[1]
+    scraper_path = None
+    i = 0
+    while i < len(args):
+        if args[i] == '--limit':
+            if i + 1 >= len(args):
+                print("Error: --limit requires a number, e.g. --limit 3")
+                return 1
+            _JOB_LIMIT = int(args[i + 1])
+            i += 2
+        else:
+            scraper_path = args[i]
+            i += 1
+
+    if not scraper_path:
+        print(__doc__)
+        return 1
 
     print("=" * 70)
     print("DRY RUN MODE — DB writes intercepted, nothing will be committed")
     print(f"Scraper: {scraper_path}")
+    if _JOB_LIMIT:
+        print(f"Limit:   stopping after {_JOB_LIMIT} job(s) touched")
     print("=" * 70)
     print()
 
     try:
         _load_and_run(scraper_path)
+    except _DryRunLimitReached:
+        pass
     except Exception as e:
         import traceback
         print(f"[DRY RUN] Scraper error: {e}")
