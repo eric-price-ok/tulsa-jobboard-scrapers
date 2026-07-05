@@ -221,6 +221,26 @@ This table exists in the schema and is intended to power an admin scheduling UI.
 
 ### Reference data (lookup tables with seed values)
 
+#### `functions`
+Accounting, Administrative, Customer Support, Education, Engineering, Executive,
+Healthcare, Hospitality, Human Resources, Information Technology, Law Enforcement,
+Legal, Manufacturing, Operations, Other, Product, Purchasing, Quality, Sales,
+Science, Security, Skilled Trades
+
+> **This is the full, exact list — nothing else exists.** When writing a
+> `_FUNCTION_KEYWORDS`-style dict for a new scraper, every category key MUST
+> be one of these 22 names, verbatim. Many existing scrapers predate this
+> list being documented and use invented names that don't exist here (e.g.
+> `Administration` instead of `Administrative`, `Finance` instead of
+> `Accounting`, `Customer Service` instead of `Customer Support`,
+> `Skilled Labor` instead of `Skilled Trades`, `Healthcare Provider` instead
+> of `Healthcare`, `Marketing`/`Project Management`/`Transportation/Logistics`
+> with no equivalent at all, `Engineering, Mechanical` etc. instead of plain
+> `Engineering`). A lookup failure here does NOT raise an error or log a
+> warning distinct from a genuine no-keyword-match — it silently falls
+> through to `Other`, so this class of bug is invisible without an explicit
+> audit against this list.
+
 #### `company_type`
 Private Company, Public Company, Non-Profit, Government / Public Sector, Startup
 

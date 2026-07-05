@@ -90,6 +90,7 @@ These have caused bugs in the past — check every scraper against them:
 6. **Update both `updated_at` and `last_scraped`** when a previously-seen job is confirmed still live.
 7. **`cities.city_name`** — the city name column is `city_name`, not `name`. Query: `SELECT id FROM cities WHERE city_name = %s`.
 8. **`scrapinglog` count constraint** — `(jobs_added + jobs_updated + jobs_skipped) <= jobs_found` is enforced by a CHECK constraint. Do not count the same job in multiple buckets.
+9. **`functions.name` values are a fixed, exact list — never invent a category name.** See the `functions` entry in `docs/scraper-integration-guide.md`'s Reference Data section for the full list before writing a `_FUNCTION_KEYWORDS`-style dict. A category name that doesn't match exactly (e.g. `Administration` vs the real `Administrative`, `Finance` vs `Accounting`) fails the `SELECT id FROM functions WHERE name = %s` lookup silently — no error, no distinct warning — and the job falls through to `Other`, indistinguishable from a genuine no-keyword-match. Many existing scrapers predate this being documented and have this exact bug; don't copy their category names on faith.
 
 ## Updating an Existing Scraper (Checklist)
 
