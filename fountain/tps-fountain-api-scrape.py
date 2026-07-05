@@ -472,12 +472,16 @@ class SeleniumJobScraper:
             'pay_frequency': None, 'date_posted': None,
         }
 
+        logger.info(f"  Loading job detail page: {job_url}")
+
         try:
             self.driver.get(job_url)
             wait = WebDriverWait(self.driver, timeout)
             try:
                 wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
             except TimeoutException:
+                logger.warning(f"  Timed out waiting for <body> at {job_url} "
+                                f"(landed on: {self.driver.current_url!r})")
                 return empty
 
             # The SPA shell's <body> exists immediately, before React has
@@ -490,20 +494,24 @@ class SeleniumJobScraper:
                     lambda d: d.execute_script("return document.body.innerText.length") > 200
                 )
             except TimeoutException:
-                logger.warning("  Page body text never grew past 200 chars within timeout — "
-                                "SPA may not have hydrated (see Cloudflare check below)")
+                logger.warning(
+                    f"  Page body text never grew past 200 chars within timeout for {job_url} "
+                    f"(current_url: {self.driver.current_url!r}, title: {self.driver.title!r}) — "
+                    f"SPA may not have hydrated (see Cloudflare check below)"
+                )
 
             html = self.driver.page_source
         except Exception as e:
-            logger.error(f"  Error loading job page: {e}")
+            logger.error(f"  Error loading job page {job_url}: {e}")
             return empty
 
         try:
             lower_html = html.lower()
             if 'cf-browser-verification' in lower_html or 'checking your browser' in lower_html or \
                ('just a moment' in lower_html and 'cloudflare' in lower_html):
-                logger.warning("  Page appears to be a Cloudflare challenge/interstitial, not real content — "
-                                "headless Selenium is likely being blocked (see FRAGILITY NOTE #3)")
+                logger.warning(f"  Page at {job_url} appears to be a Cloudflare challenge/interstitial, "
+                                f"not real content — headless Selenium is likely being blocked "
+                                f"(see FRAGILITY NOTE #3)")
 
             soup = BeautifulSoup(html, 'html.parser')
             for tag in soup.find_all(['script', 'style', 'noscript']):
@@ -552,9 +560,10 @@ class SeleniumJobScraper:
                 if len(text) > 100:
                     logger.info(f"  Extracted description from body fallback: {len(text)} characters")
                     return {**empty, 'description': text[:50000]}
-                logger.warning(f"  Body text only had {len(text)} characters after hydration wait")
+                logger.warning(f"  Body text only had {len(text)} characters after hydration wait "
+                                f"for {job_url} (raw page_source length: {len(html)})")
 
-            logger.warning("  No meaningful rendered description found")
+            logger.warning(f"  No meaningful rendered description found for {job_url}")
             return empty
         except Exception as e:
             logger.warning(f"  Error extracting description: {e}")
