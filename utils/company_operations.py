@@ -225,8 +225,15 @@ def get_company_config_by_name(cursor, company_name: str) -> Optional[Dict]:
         return None
 
 
-def get_or_create_company_site(cursor, company_id: int, location_name: str, city_id: int = None, logger=None) -> int:
-    """Get existing company site by site_name or create new one, return site ID"""
+def get_or_create_company_site(cursor, company_id: int, location_name: str, city_id: int = None, logger=None,
+                                address1: str = None, state_id: int = None, country_id: int = None,
+                                site_type_name: str = None) -> int:
+    """Get existing company site by site_name or create new one, return site ID
+
+    address1/state_id/country_id/site_type_name are only used when creating a
+    new row — an existing site's address/type is never overwritten here.
+    site_type_name is looked up against companysitetype (e.g. 'Branch Office').
+    """
     if not location_name or not location_name.strip():
         return None
 
@@ -243,11 +250,20 @@ def get_or_create_company_site(cursor, company_id: int, location_name: str, city
             logger.info(f"Found existing company site: {site_name} (ID: {result['id']})")
         return result['id']
 
+    site_type_id = None
+    if site_type_name:
+        cursor.execute("SELECT id FROM companysitetype WHERE name = %s", (site_type_name,))
+        type_result = cursor.fetchone()
+        if type_result:
+            site_type_id = type_result['id']
+        elif logger:
+            logger.warning(f"Company site type '{site_type_name}' not found in database")
+
     cursor.execute("""
-        INSERT INTO companysite (company_id, site_name, city_id, is_active)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO companysite (company_id, site_name, city_id, address1, state_id, country_id, site_type, is_active)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
-    """, (company_id, site_name, city_id, True))
+    """, (company_id, site_name, city_id, address1, state_id, country_id, site_type_id, True))
 
     result = cursor.fetchone()
     site_id = result['id']
