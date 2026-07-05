@@ -48,21 +48,23 @@ _FUNCTION_KEYWORDS = {
         'system', 'network', 'security engineer', 'devops', 'cloud',
         'application', 'help desk', 'it support', 'cyber',
     ],
-    'Transportation/Logistics': [
+    'Operations': [
         'driver', 'cdl', 'truck', 'transport', 'logistics', 'fleet', 'dispatcher',
+        'project manager', 'program manager', 'store manager', 'operations manager',
+        'district manager', 'division manager',
     ],
-    'Supply Chain': [
+    'Purchasing': [
         'warehouse', 'distribution', 'supply chain', 'inventory', 'shipping',
         'receiving', 'procurement', 'purchasing',
     ],
-    'Food Service': [
+    'Hospitality': [
         'kitchen', 'cook', 'food service', 'chef', 'culinary',
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'maintenance', 'technician', 'mechanic', 'electrician', 'facilities',
         'construction', 'equipment operator',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'audit', 'payroll',
         'treasury',
     ],
@@ -75,20 +77,16 @@ _FUNCTION_KEYWORDS = {
     'Marketing': [
         'marketing', 'brand', 'communications', 'social media', 'advertising',
     ],
-    'Project Management': [
-        'project manager', 'program manager', 'store manager', 'operations manager',
-        'district manager', 'division manager',
-    ],
     'Quality': [
         'quality', 'qa', 'qc', 'food safety',
     ],
     'Security': [
         'security', 'safety', 'loss prevention', 'asset protection',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'clerk', 'office',
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'cashier', 'clerk', 'assistant manager', 'team leader',
         'shift leader', 'attendant',
     ],

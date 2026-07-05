@@ -56,13 +56,11 @@ _FUNCTION_KEYWORDS = {
         'analyst', 'database', 'system', 'network', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber'
     ],
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical', 'mechanical engineer', 'gaming machine',
-        'slot machine', 'hardware engineer', 'product engineer'
-    ],
-    'Engineering, Electrical': [
+        'slot machine', 'hardware engineer', 'product engineer',
         'electrical', 'electrical engineer', 'electronics',
-        'embedded systems', 'firmware', 'hardware'
+        'embedded systems', 'firmware', 'hardware',
     ],
     'Manufacturing': [
         'manufacturing', 'production', 'assembly', 'factory',
@@ -72,15 +70,15 @@ _FUNCTION_KEYWORDS = {
         'sales', 'account manager', 'business development', 'territory',
         'account executive', 'casino sales', 'gaming sales'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'technical support', 'field service',
         'service technician', 'customer success', 'help desk', 'client support'
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'product manager',
         'operations', 'business analyst', 'operations manager'
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant',
         'treasury', 'controller', 'audit'
     ],
@@ -97,11 +95,11 @@ _FUNCTION_KEYWORDS = {
         'quality', 'qa', 'qc', 'testing', 'inspector',
         'assurance', 'quality engineer', 'test engineer'
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'maintenance', 'mechanic', 'installer',
         'field technician', 'service tech', 'repair', 'assembly technician'
     ],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Security': ['security', 'safety', 'guard'],
 }
 

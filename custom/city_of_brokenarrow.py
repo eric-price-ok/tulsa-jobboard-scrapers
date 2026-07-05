@@ -112,15 +112,17 @@ class DatabaseManager:
 
         with self.conn.cursor() as cursor:
             function_keywords = {
-                'Public Safety': ['police', 'fire', 'emergency', '911', 'dispatcher', 'security', 'officer', 'detective', 'firefighter', 'ems', 'paramedic'],
-                'Public Works': ['utilities', 'water', 'sewer', 'streets', 'maintenance', 'facilities', 'public works', 'infrastructure', 'roads'],
-                'Administration': ['clerk', 'admin', 'administrative', 'finance', 'hr', 'human resources', 'budget', 'treasurer', 'accounting', 'receptionist', 'assistant'],
+                'Law Enforcement': ['police', 'fire', 'emergency', '911', 'dispatcher', 'security', 'officer', 'detective', 'firefighter', 'ems', 'paramedic'],
+                'Operations': [
+                    'utilities', 'water', 'sewer', 'streets', 'maintenance', 'facilities', 'public works', 'infrastructure', 'roads',
+                    'parks', 'recreation', 'sports', 'community center', 'recreation center', 'lifeguard', 'coach',
+                    'fleet', 'vehicle', 'equipment', 'driver', 'mechanic', 'transportation',
+                ],
+                'Administrative': ['clerk', 'admin', 'administrative', 'finance', 'hr', 'human resources', 'budget', 'treasurer', 'accounting', 'receptionist', 'assistant'],
                 'Legal': ['legal', 'attorney', 'prosecutor', 'court', 'judge', 'bailiff', 'legal assistant'],
                 'Engineering': ['engineer', 'engineering', 'planner', 'planning', 'zoning', 'building', 'inspection', 'development', 'architect'],
-                'Parks and Recreation': ['parks', 'recreation', 'sports', 'community center', 'recreation center', 'lifeguard', 'coach'],
                 'Information Technology': ['it', 'information technology', 'technology', 'systems', 'data', 'network', 'computer', 'software', 'tech'],
-                'Transportation/Logistics': ['fleet', 'vehicle', 'equipment', 'driver', 'mechanic', 'transportation'],
-                'Customer Service': ['customer', 'service', 'support', 'public', 'citizen']
+                'Customer Support': ['customer', 'service', 'support', 'public', 'citizen']
             }
 
             if job_title_lower:

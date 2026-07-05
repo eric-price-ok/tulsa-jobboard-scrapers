@@ -45,13 +45,9 @@ LEVER_API_URL = f'https://api.lever.co/v0/postings/{LEVER_SITE_SLUG}?mode=json'
 # Zeeco manufactures combustion/burner management equipment for oil & gas and
 # other industrial clients. Matched against title + Lever team/department text.
 _FUNCTION_KEYWORDS = {
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical engineer', 'mechanical', 'combustion engineer', 'burner', 'thermal',
-    ],
-    'Engineering, Electrical': [
         'electrical engineer', 'electrical', 'controls engineer', 'instrumentation', 'plc',
-    ],
-    'Engineering, Other': [
         'applications engineer', 'application engineer', 'design engineer',
         'project engineer', 'process engineer', 'engineer',
     ],
@@ -63,14 +59,14 @@ _FUNCTION_KEYWORDS = {
         'manufacturing', 'production', 'assembly', 'fabrication', 'fabricator',
         'machinist', 'welder', 'welding', 'cnc', 'shop',
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'maintenance', 'mechanic', 'electrician', 'field service',
         'commissioning',
     ],
     'Quality': [
         'quality', 'qa', 'qc', 'inspector',
     ],
-    'Supply Chain': [
+    'Purchasing': [
         'supply chain', 'purchasing', 'procurement', 'buyer', 'planner',
         'materials', 'inventory', 'logistics', 'shipping', 'receiving', 'warehouse',
     ],
@@ -78,13 +74,13 @@ _FUNCTION_KEYWORDS = {
         'sales', 'account manager', 'business development', 'account executive',
         'sales representative',
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'customer support', 'client services',
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'project coordinator',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'audit', 'payroll',
         'controller', 'treasury',
     ],
@@ -97,7 +93,7 @@ _FUNCTION_KEYWORDS = {
     'Legal': [
         'legal', 'attorney', 'counsel', 'compliance', 'contract',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'clerk', 'office',
     ],
     'Security': [

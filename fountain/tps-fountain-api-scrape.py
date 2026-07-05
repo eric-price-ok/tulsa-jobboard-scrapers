@@ -135,14 +135,14 @@ MAX_PAGES = 50  # safety cap in case pagination metadata ever misbehaves
 # Tulsa Public Schools — K-12 district. Matched against job title +
 # location_name (the hiring department, e.g. "Transportation", "Facilities").
 _FUNCTION_KEYWORDS = {
-    'Education/Training': [
+    'Education': [
         'teacher', 'instructor', 'educator', 'faculty', 'classroom',
         'special education', 'librarian', 'counselor', 'speech', 'tutor',
         'paraprofessional', 'para teacher', 'academic partner', 'iep facilitator',
         'school psychologist', 'teaching and learning', 'dean of students',
         'interpreter', 'coach', 'learning director',
     ],
-    'Administration': [
+    'Administrative': [
         'principal', 'superintendent', 'director', 'coordinator', 'supervisor',
         'administrative', 'admin', 'secretary', 'clerk',
     ],
@@ -150,10 +150,10 @@ _FUNCTION_KEYWORDS = {
         'technology', 'computer', 'network', 'systems', 'tech support',
         'audio video', 'hris', 'client services',
     ],
-    'Transportation/Logistics': [
+    'Operations': [
         'bus', 'driver', 'transportation', 'fleet',
     ],
-    'Finance': [
+    'Accounting': [
         'business manager', 'finance', 'accounting', 'bookkeeper', 'payroll', 'buyer',
     ],
     'Human Resources': [
@@ -162,18 +162,18 @@ _FUNCTION_KEYWORDS = {
     'Security': [
         'security', 'safety', 'sro', 'resource officer', 'guard', 'police',
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'maintenance', 'custodial', 'custodian', 'janitor', 'groundskeeper',
         'facilities', 'hvac', 'carpentry', 'electrician', 'plumb', 'roofer',
         'painter', 'sheet metal', 'mechanic', 'journeyperson', 'craftsperson',
     ],
-    'Food Service': [
+    'Hospitality': [
         'cafeteria', 'cook', 'child nutrition', 'nutrition',
     ],
-    'Healthcare Provider': [
+    'Healthcare': [
         'nurse', 'health assistant', 'occupational therapist',
     ],
-    'Customer Service': [
+    'Customer Support': [
         'family support', 'family specialist', 'parent involvement', 'family retention',
     ],
 }

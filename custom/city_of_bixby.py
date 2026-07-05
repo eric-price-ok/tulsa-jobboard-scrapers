@@ -102,18 +102,20 @@ class DatabaseManager:
             function_keywords = {
                 'Information Technology': ['technology', 'it', 'software', 'tech', 'data', 'systems', 'computer', 'network'],
                 'Engineering': ['engineering', 'engineer', 'civil', 'mechanical', 'electrical'],
-                'Finance': ['finance', 'financial', 'accounting', 'accountant', 'budget', 'treasurer'],
+                'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'budget', 'treasurer'],
                 'Human Resources': ['hr', 'human resources', 'people', 'personnel'],
-                'Administration': ['admin', 'administrative', 'clerk', 'coordinator', 'assistant', 'secretary'],
+                'Administrative': ['admin', 'administrative', 'clerk', 'coordinator', 'assistant', 'secretary'],
                 'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'paralegal'],
-                'Public Safety': ['police', 'fire', 'safety', 'security', 'emergency', 'dispatcher'],
-                'Operations': ['operations', 'maintenance', 'facility', 'utilities', 'public works'],
-                'Planning': ['planning', 'planner', 'zoning', 'development'],
-                'Parks and Recreation': ['parks', 'recreation', 'athletic', 'grounds', 'maintenance'],
-                'Customer Service': ['customer', 'service', 'support', 'reception', 'front desk'],
-                'Transportation/Logistics': ['transportation', 'logistics', 'fleet', 'driver'],
-                'Healthcare Provider': ['nurse', 'medical', 'healthcare', 'clinical'],
-                'Skilled Labor': ['operator', 'technician', 'maintenance', 'mechanic', 'welder', 'electrician']
+                'Law Enforcement': ['police', 'fire', 'safety', 'security', 'emergency', 'dispatcher'],
+                'Operations': [
+                    'operations', 'maintenance', 'facility', 'utilities', 'public works',
+                    'planning', 'planner', 'zoning', 'development',
+                    'parks', 'recreation', 'athletic', 'grounds',
+                    'transportation', 'logistics', 'fleet', 'driver',
+                ],
+                'Customer Support': ['customer', 'service', 'support', 'reception', 'front desk'],
+                'Healthcare': ['nurse', 'medical', 'healthcare', 'clinical'],
+                'Skilled Trades': ['operator', 'technician', 'maintenance', 'mechanic', 'welder', 'electrician']
             }
 
             if job_title_lower:

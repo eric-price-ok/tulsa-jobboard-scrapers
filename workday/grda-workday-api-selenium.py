@@ -40,14 +40,10 @@ SOURCE_JOB_BOARD = 'GRDA Workday Scraper'
 # GRDA is Oklahoma's state-owned public power and water utility (hydroelectric
 # dams, power plants, transmission lines, lake/reservoir management, lake patrol).
 _FUNCTION_KEYWORDS = {
-    'Engineering, Electrical': [
+    'Engineering': [
         'electrical engineer', 'electrical', 'substation', 'transmission engineer',
         'protection engineer', 'relay', 'scada', 'controls engineer',
-    ],
-    'Engineering, Mechanical': [
         'mechanical engineer', 'mechanical', 'turbine', 'hydro', 'plant engineer',
-    ],
-    'Engineering, Civil': [
         'civil engineer', 'civil', 'structural', 'dam safety', 'geotechnical',
     ],
     'Information Technology': [
@@ -55,13 +51,13 @@ _FUNCTION_KEYWORDS = {
         'network', 'devops', 'cloud', 'application', 'cybersecurity', 'cyber',
         'gis', 'help desk', 'it support',
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'lineman', 'line worker', 'line technician', 'technician', 'operator',
         'plant operator', 'power plant', 'mechanic', 'electrician', 'welder',
         'maintenance', 'crew', 'apprentice', 'journeyman', 'substation technician',
         'meter', 'equipment operator',
     ],
-    'Environmental': [
+    'Science': [
         'environmental', 'ecosystem', 'water quality', 'biologist', 'natural resources',
         'fisheries', 'wildlife', 'hydrologist',
     ],
@@ -69,11 +65,11 @@ _FUNCTION_KEYWORDS = {
         'police', 'officer', 'ranger', 'security', 'safety', 'patrol', 'dispatcher',
         'emergency management',
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'operations manager', 'plant manager',
         'project coordinator',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'controller', 'audit',
         'treasury', 'budget', 'payroll',
     ],
@@ -91,17 +87,17 @@ _FUNCTION_KEYWORDS = {
     'Marketing': [
         'marketing', 'communications', 'public relations', 'social media',
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'customer care', 'call center', 'support',
     ],
     'Quality': [
         'quality', 'qa', 'qc', 'inspector', 'compliance specialist',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'clerk', 'office',
         'records',
     ],
-    'Supply Chain': [
+    'Purchasing': [
         'supply chain', 'purchasing', 'procurement', 'buyer', 'warehouse',
         'inventory', 'materials',
     ],

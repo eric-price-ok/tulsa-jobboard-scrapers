@@ -37,11 +37,11 @@ _FUNCTION_KEYWORDS = {
         'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller',
         'audit', 'bookkeeping', 'clerk', 'loan', 'credit', 'banking',
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'help desk', 'call center', 'client',
         'teller', 'banker', 'representative', 'relationship',
     ],
@@ -52,11 +52,13 @@ _FUNCTION_KEYWORDS = {
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
     'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
     'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-    'Operations': ['operations', 'ops', 'supply chain', 'logistics', 'process', 'facility'],
-    'Project Management': ['project manager', 'program manager', 'scrum master', 'project coordinator'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Operations': [
+        'operations', 'ops', 'supply chain', 'logistics', 'process', 'facility',
+        'project manager', 'program manager', 'scrum master', 'project coordinator',
+    ],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Security': ['security', 'safety', 'guard', 'protection'],
-    'Management': ['manager', 'director', 'supervisor', 'lead', 'executive', 'president', 'vice president'],
+    'Executive': ['manager', 'director', 'supervisor', 'lead', 'executive', 'president', 'vice president'],
 }
 
 logger = logging.getLogger(__name__)

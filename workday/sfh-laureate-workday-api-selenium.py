@@ -62,19 +62,15 @@ def _parse_salary_from_text(text: str) -> Tuple[Optional[float], Optional[float]
 
 
 _FUNCTION_KEYWORDS = {
-    'Nursing': [
+    'Healthcare': [
         'nurse', 'nursing', 'rn', 'lpn', 'cna', 'registered nurse', 'licensed practical',
         'certified nursing', 'nurse practitioner', 'clinical nurse',
-    ],
-    'Clinical / Allied Health': [
         'therapist', 'therapy', 'technologist', 'technician', 'psychiatric',
         'psychiatry', 'psychologist', 'psychology', 'mental health', 'behavioral health',
         'counselor', 'counseling', 'substance abuse', 'addiction', 'crisis',
         'case manager', 'case management', 'social worker', 'social work',
         'occupational therapy', 'recreational therapy', 'expressive therapy',
         'laboratory', 'lab', 'pharmacy', 'pharmacist', 'medical assistant',
-    ],
-    'Physicians / Medical Staff': [
         'physician', 'doctor', 'md', 'do', 'psychiatrist', 'hospitalist',
         'specialist', 'anesthesiologist',
     ],
@@ -84,7 +80,7 @@ _FUNCTION_KEYWORDS = {
         'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber', 'epic', 'ehr', 'emr',
         'informatics', 'it support', 'helpdesk',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'audit', 'billing',
         'revenue cycle', 'coding', 'coder', 'biller', 'reimbursement',
     ],
@@ -92,20 +88,18 @@ _FUNCTION_KEYWORDS = {
         'hr', 'human resources', 'recruiter', 'talent', 'benefits', 'payroll',
         'workforce',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'receptionist',
         'scheduler', 'patient access', 'registration', 'medical records',
         'health information', 'director', 'manager', 'supervisor',
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'operations manager',
+        'facilities', 'housekeeping', 'environmental services', 'food service',
+        'nutrition', 'dietary', 'security', 'maintenance', 'biomedical', 'biomed',
     ],
     'Marketing': [
         'marketing', 'brand', 'communications', 'social media', 'public relations',
-    ],
-    'Facilities / Support Services': [
-        'facilities', 'housekeeping', 'environmental services', 'food service',
-        'nutrition', 'dietary', 'security', 'maintenance', 'biomedical', 'biomed',
     ],
     'Quality': [
         'quality', 'qa', 'qc', 'infection control', 'patient safety',

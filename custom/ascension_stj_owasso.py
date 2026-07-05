@@ -85,7 +85,7 @@ class DatabaseManager:
                     'surgical', 'surgery', 'anesthesia', 'emergency', 'critical care', 'Cardiologist',
                     'icu', 'er', 'med/surg', 'pediatric', 'oncology', 'cardiology', 'Otolaryngologist'
                 ],
-                'Administration': [
+                'Administrative': [
                     'admin', 'administrative', 'coordinator', 'assistant', 'office',
                     'secretary', 'clerk', 'registration', 'receptionist', 'scheduler'
                 ],
@@ -93,13 +93,15 @@ class DatabaseManager:
                     'it', 'technology', 'software', 'data', 'systems', 'network',
                     'computer', 'analyst', 'developer', 'programmer'
                 ],
-                'Finance': ['finance', 'financial', 'accounting', 'accountant', 'billing', 'revenue'],
+                'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'billing', 'revenue'],
                 'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people'],
                 'Operations': ['operations', 'ops', 'supply', 'logistics', 'facility', 'maintenance'],
-                'Customer Service': ['customer', 'service', 'support', 'call center', 'patient'],
+                'Customer Support': ['customer', 'service', 'support', 'call center', 'patient'],
                 'Security': ['security', 'safety', 'guard', 'protection'],
-                'Food Service': ['food', 'dietary', 'nutrition', 'kitchen', 'cafeteria', 'cook'],
-                'Environmental Services': ['housekeeping', 'environmental', 'cleaning', 'custodial']
+                'Hospitality': [
+                    'food', 'dietary', 'nutrition', 'kitchen', 'cafeteria', 'cook',
+                    'housekeeping', 'environmental', 'cleaning', 'custodial',
+                ],
             }
 
             for function_name, keywords in function_keywords.items():

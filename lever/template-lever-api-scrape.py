@@ -61,12 +61,12 @@ _FUNCTION_KEYWORDS = {
         'network', 'devops', 'cloud', 'help desk', 'it support', 'cyber',
     ],
     'Sales': ['sales', 'account manager', 'business development', 'account executive'],
-    'Customer Service': ['customer service', 'support', 'help desk', 'client'],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
+    'Customer Support': ['customer service', 'support', 'help desk', 'client'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'benefits'],
     'Marketing': ['marketing', 'brand', 'communications', 'social media'],
     'Legal': ['legal', 'attorney', 'counsel', 'compliance', 'contract'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant'],
 }
 
 

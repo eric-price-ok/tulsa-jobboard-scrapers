@@ -62,14 +62,14 @@ _FUNCTION_KEYWORDS = {
     'Human Resources': [
         'hr', 'human resources', 'recruiter', 'talent', 'payroll', 'benefits'
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'controller', 'billing', 'accounts'
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'director', 'manager', 'supervisor',
         'executive', 'assistant', 'specialist', 'operations'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'representative', 'receptionist', 'front desk'
     ],
     'Legal': ['legal', 'attorney', 'compliance', 'contracts'],

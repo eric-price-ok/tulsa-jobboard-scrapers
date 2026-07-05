@@ -140,25 +140,27 @@ class DatabaseManager:
         
         # Manufacturing-focused function mapping
         function_keywords = {
-            'Production & Skilled Trades': [
-                'operator', 'technician', 'maintenance', 'mechanic', 'welder', 
+            'Skilled Trades': [
+                'operator', 'technician', 'maintenance', 'mechanic', 'welder',
                 'electrician', 'machinist', 'assembler', 'production worker',
                 'skilled trades', 'trades', 'fabricator', 'installer'
             ],
-            'Engineering - Mechanical': ['mechanical engineer', 'mechanical', 'mech eng'],
-            'Engineering - Electrical': ['electrical engineer', 'electrical', 'elec eng'],
-            'Engineering - Civil': ['civil engineer', 'civil'],
+            'Engineering': [
+                'mechanical engineer', 'mechanical', 'mech eng', 'electrical engineer',
+                'electrical', 'elec eng', 'civil engineer', 'civil',
+            ],
             'Quality': [
                 'quality', 'qa', 'qc', 'inspector', 'testing', 'quality control',
                 'quality assurance', 'quality engineer'
             ],
             'Manufacturing': [
-                'manufacturing', 'plant manager', 'production supervisor', 
+                'manufacturing', 'plant manager', 'production supervisor',
                 'production manager', 'plant', 'factory', 'facility manager'
             ],
             'Operations': [
                 'operations', 'supply chain', 'logistics', 'planning', 'scheduler',
-                'procurement', 'purchasing', 'buyer'
+                'procurement', 'purchasing', 'buyer',
+                'project manager', 'program manager', 'coordinator',
             ],
             'Maintenance': [
                 'maintenance', 'facilities', 'building', 'hvac', 'utilities',
@@ -169,17 +171,16 @@ class DatabaseManager:
                 'safety engineer', 'environmental engineer'
             ],
             'Information Technology': [
-                'software', 'developer', 'programmer', 'engineer', 
+                'software', 'developer', 'programmer', 'engineer',
                 'data', 'analyst', 'database', 'system', 'network'
             ],
-            'Finance': ['finance', 'financial', 'accounting', 'accountant', 'controller'],
+            'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'controller'],
             'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people'],
             'Sales': ['sales', 'account manager', 'business development'],
             'Marketing': ['marketing', 'brand', 'communications'],
             'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance'],
-            'Project Management': ['project manager', 'program manager', 'coordinator'],
-            'Customer Service': ['customer service', 'support', 'customer'],
-            'Administration': ['admin', 'administrative', 'assistant', 'office']
+            'Customer Support': ['customer service', 'support', 'customer'],
+            'Administrative': ['admin', 'administrative', 'assistant', 'office']
         }
         
         # Try to match keywords

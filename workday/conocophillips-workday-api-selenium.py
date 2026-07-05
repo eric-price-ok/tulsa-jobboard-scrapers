@@ -37,30 +37,27 @@ COMPANY_NAME = 'ConocoPhillips'
 SOURCE_JOB_BOARD = 'ConocoPhillips Workday'
 
 _FUNCTION_KEYWORDS = {
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical engineer', 'mechanical', 'process engineer', 'process',
         'pipeline', 'compressor', 'rotating equipment', 'static equipment',
-        'facilities engineer', 'production engineer', 'reservoir engineer'
-    ],
-    'Engineering, Electrical': [
+        'facilities engineer', 'production engineer', 'reservoir engineer',
         'electrical engineer', 'electrical', 'instrumentation', 'controls',
-        'automation', 'i&e'
+        'automation', 'i&e', 'civil engineer', 'civil', 'structural',
     ],
-    'Engineering, Civil': ['civil engineer', 'civil', 'structural'],
     'Information Technology': [
         'software', 'developer', 'programmer', 'data scientist', 'data engineer',
         'analyst', 'database', 'network', 'devops', 'cloud', 'cybersecurity',
         'cyber', 'application', 'web', 'mobile', 'scrum', 'agile', 'architecture'
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'project management', 'program manager',
         'project coordinator', 'planning', 'scheduler', 'project engineer'
     ],
-    'Geoscience': [
+    'Science': [
         'geologist', 'geophysicist', 'geoscientist', 'geoscience',
         'subsurface', 'petrophysicist', 'seismic', 'reservoir'
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'controller',
         'audit', 'treasury', 'budget', 'economist', 'economics'
     ],
@@ -76,11 +73,11 @@ _FUNCTION_KEYWORDS = {
         'legal', 'attorney', 'counsel', 'compliance', 'regulatory',
         'contracts', 'land', 'landman'
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'operator', 'mechanic', 'welder', 'electrician',
         'maintenance', 'field', 'crew', 'journeyman', 'apprentice'
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'specialist',
         'analyst', 'office', 'clerical', 'receptionist'
     ],

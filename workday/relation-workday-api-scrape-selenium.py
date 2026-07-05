@@ -58,12 +58,12 @@ _FUNCTION_KEYWORDS = {
         'sales', 'account manager', 'business development', 'territory',
         'account executive', 'agent', 'broker', 'producer', 'underwriter'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'claims', 'claims adjuster',
         'claims specialist', 'claims examiner', 'client support',
         'service representative', 'help desk'
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'treasury',
         'controller', 'audit', 'actuary', 'actuarial', 'risk management'
     ],
@@ -76,8 +76,8 @@ _FUNCTION_KEYWORDS = {
         'legal', 'attorney', 'lawyer', 'counsel', 'compliance',
         'contract', 'regulatory'
     ],
-    'Project Management': ['project manager', 'program manager', 'operations manager'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Operations': ['project manager', 'program manager', 'operations manager'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Security': ['security', 'safety', 'guard'],
 }
 

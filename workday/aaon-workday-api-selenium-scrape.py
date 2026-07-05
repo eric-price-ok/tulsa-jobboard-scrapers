@@ -64,31 +64,27 @@ _FUNCTION_KEYWORDS = {
         'system', 'network', 'security', 'devops', 'cloud', 'application',
         'web', 'erp', 'sap', 'it support', 'help desk', 'cyber'
     ],
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical engineer', 'mechanical engineering', 'hvac engineer',
-        'thermal', 'refrigeration engineer', 'design engineer'
-    ],
-    'Engineering, Electrical': [
+        'thermal', 'refrigeration engineer', 'design engineer',
         'electrical engineer', 'electrical engineering', 'controls engineer',
-        'plc', 'automation engineer'
-    ],
-    'Engineering, Other': [
+        'plc', 'automation engineer',
         'engineer', 'engineering', 'drafter', 'draftsman', 'cad', 'r&d',
-        'product development'
+        'product development',
     ],
     'Manufacturing': [
         'manufacturing', 'production', 'assembly', 'fabrication', 'fabricator',
         'machine operator', 'press brake', 'sheet metal', 'brazer', 'welder',
         'welding', 'coil', 'paint line', 'plant'
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'maintenance', 'mechanic', 'electrician', 'machinist',
         'tool and die', 'millwright', 'forklift'
     ],
     'Quality': [
         'quality', 'qa', 'qc', 'inspector', 'quality engineer', 'quality control'
     ],
-    'Supply Chain': [
+    'Purchasing': [
         'supply chain', 'purchasing', 'procurement', 'buyer', 'planner',
         'materials', 'inventory', 'logistics', 'shipping', 'receiving',
         'warehouse'
@@ -97,14 +93,14 @@ _FUNCTION_KEYWORDS = {
         'sales', 'account manager', 'business development', 'account executive',
         'sales representative', 'territory manager'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'help desk', 'client', 'customer care'
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'operations manager',
         'production manager', 'plant manager'
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'audit', 'payroll',
         'controller', 'cost accountant'
     ],
@@ -117,7 +113,7 @@ _FUNCTION_KEYWORDS = {
     'Legal': [
         'legal', 'attorney', 'counsel', 'compliance', 'contract'
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'clerk'
     ],
     'Security': [

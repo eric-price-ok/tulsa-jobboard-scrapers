@@ -37,11 +37,11 @@ logger = logging.getLogger(__name__)
 
 # Education-focused function keyword mapping keyed on Applitrack position_type field
 _FUNCTION_KEYWORDS = {
-    'Administration': [
+    'Administrative': [
         'principal', 'assistant principal', 'superintendent', 'director',
         'coordinator', 'supervisor', 'admin', 'leadership', 'administration'
     ],
-    'Teaching': [
+    'Education': [
         'teacher', 'instructor', 'educator', 'faculty', 'classroom',
         'special education', 'librarian', 'counselor', 'speech',
         'occupational therapist'
@@ -53,10 +53,10 @@ _FUNCTION_KEYWORDS = {
     'Information Technology': [
         'technology', 'computer', 'network', 'systems', 'tech support'
     ],
-    'Transportation': [
+    'Operations': [
         'bus', 'driver', 'transportation', 'mechanic', 'fleet'
     ],
-    'Food Service': [
+    'Hospitality': [
         'cafeteria', 'kitchen', 'food service', 'nutrition', 'cook'
     ],
     'Maintenance': [

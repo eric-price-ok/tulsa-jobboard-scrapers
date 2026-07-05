@@ -40,14 +40,14 @@ logger = logging.getLogger(__name__)
 
 # Healthcare-specific function keyword mapping
 _FUNCTION_KEYWORDS = {
-    'Healthcare Provider': [
+    'Healthcare': [
         'nurse', 'rn', 'lpn', 'cna', 'registered nurse', 'medical assistant',
         'physician', 'doctor', 'md', 'np', 'nurse practitioner', 'pa',
         'physician assistant', 'therapist', 'physical therapist', 'occupational therapist',
         'respiratory therapist', 'pharmacist', 'pharmacy', 'technician', 'medical technician',
         'lab tech', 'radiology', 'ultrasound', 'xray', 'clinical', 'medical', 'registered'
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'office',
         'scheduler', 'scheduling', 'receptionist', 'clerk', 'registration'
     ],
@@ -56,20 +56,20 @@ _FUNCTION_KEYWORDS = {
         'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'scrum', 'agile'
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'treasury',
         'controller', 'audit', 'bookkeeping', 'billing', 'revenue cycle'
     ],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
     'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
     'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'help desk', 'call center', 'client',
         'patient services', 'patient representative'
     ],
-    'Project Management': ['project manager', 'program manager', 'scrum master', 'project coordinator'],
+    'Operations': ['project manager', 'program manager', 'scrum master', 'project coordinator'],
     'Security': ['security', 'safety', 'guard', 'protection'],
-    'Research': ['research', 'researcher', 'clinical research', 'study coordinator']
+    'Science': ['research', 'researcher', 'clinical research', 'study coordinator']
 }
 
 

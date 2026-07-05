@@ -60,7 +60,7 @@ class DatabaseManager:
                 'application', 'web', 'mobile', 'qa', 'testing', 'solutions architect',
                 'enterprise architect'
             ],
-            'Finance': [
+            'Accounting': [
                 'finance', 'financial', 'accounting', 'accountant', 'treasury',
                 'controller', 'audit', 'banking', 'credit', 'loan'
             ],
@@ -68,10 +68,12 @@ class DatabaseManager:
             'Sales': ['sales', 'account manager', 'business development', 'revenue', 'relationship manager'],
             'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
             'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-            'Operations': ['operations', 'ops', 'supply chain', 'logistics', 'process', 'facility'],
-            'Project Management': ['project manager', 'program manager', 'scrum master', 'project coordinator'],
-            'Customer Service': ['customer service', 'support', 'help desk', 'call center', 'client', 'banker', 'teller'],
-            'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+            'Operations': [
+                'operations', 'ops', 'supply chain', 'logistics', 'process', 'facility',
+                'project manager', 'program manager', 'scrum master', 'project coordinator',
+            ],
+            'Customer Support': ['customer service', 'support', 'help desk', 'call center', 'client', 'banker', 'teller'],
+            'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
         }
         with self.conn.cursor() as cursor:
             for function_name, keywords in function_keywords.items():

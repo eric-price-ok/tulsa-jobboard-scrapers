@@ -39,13 +39,12 @@ _FUNCTION_KEYWORDS = {
         'manufacturing', 'production', 'assembly', 'factory', 'plant operator',
         'entry level manufacturing', 'manufacturing associate', 'production associate'
     ],
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical engineer', 'mech engineer', 'industrial engineer',
-        'process engineer', 'design engineer'
+        'process engineer', 'design engineer', 'electrical engineer', 'elec engineer',
+        'civil engineer',
     ],
-    'Engineering, Electrical': ['electrical engineer', 'elec engineer'],
-    'Engineering, Civil': ['civil engineer'],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'welder', 'electrician', 'maintenance', 'technician', 'operator',
         'skilled labor', 'trades', 'journeyman', 'apprentice'
     ],
@@ -54,18 +53,18 @@ _FUNCTION_KEYWORDS = {
         'database', 'system admin', 'network', 'cyber security', 'devops',
         'cloud', 'web', 'mobile', 'qa tester'
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'scrum master',
         'project coordinator', 'operations manager'
     ],
     'Quality': ['quality', 'qa', 'qc', 'inspector', 'quality control'],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
     'Sales': ['sales', 'account manager', 'business development', 'bd', 'revenue', 'customer'],
     'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
     'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract', 'regulatory'],
-    'Customer Service': ['customer service', 'support', 'help desk', 'call center', 'client'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Customer Support': ['customer service', 'support', 'help desk', 'call center', 'client'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Security': ['security', 'safety', 'guard', 'protection'],
 }
 

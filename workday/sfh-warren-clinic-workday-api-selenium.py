@@ -66,20 +66,16 @@ def _parse_salary_from_text(text: str) -> Tuple[Optional[float], Optional[float]
 
 
 _FUNCTION_KEYWORDS = {
-    'Nursing': [
+    'Healthcare': [
         'nurse', 'nursing', 'rn', 'lpn', 'cna', 'registered nurse', 'licensed practical',
         'certified nursing', 'nurse practitioner', 'clinical nurse',
-    ],
-    'Clinical / Allied Health': [
         'medical assistant', 'ma ', 'clinical', 'therapist', 'therapy', 'technologist',
         'technician', 'lab', 'laboratory', 'phlebotom', 'radiology', 'imaging',
         'ultrasound', 'sonographer', 'x-ray', 'mri', 'ct scan', 'respiratory',
         'pharmacy', 'pharmacist', 'optometry', 'optometrist', 'audiolog',
         'social worker', 'social work', 'case manager', 'care coordinator',
         'physical therapy', 'occupational therapy', 'speech',
-    ],
-    'Physicians / Medical Staff': [
-        'physician', 'doctor', 'md', 'do', 'np ', 'nurse practitioner', 'pa ', 'physician assistant',
+        'physician', 'doctor', 'md', 'do', 'np ', 'pa ', 'physician assistant',
         'hospitalist', 'specialist', 'internist', 'cardiologist', 'oncologist',
         'orthopedic', 'dermatolog', 'gastroenterolog', 'neurolog', 'urolog',
         'psychiatrist', 'endocrinolog', 'pulmonolog', 'rheumatolog',
@@ -90,7 +86,7 @@ _FUNCTION_KEYWORDS = {
         'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber', 'epic', 'ehr', 'emr',
         'informatics', 'it support', 'helpdesk',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'audit', 'billing',
         'revenue cycle', 'coding', 'coder', 'biller', 'reimbursement',
     ],
@@ -98,20 +94,18 @@ _FUNCTION_KEYWORDS = {
         'hr', 'human resources', 'recruiter', 'talent', 'benefits', 'payroll',
         'workforce',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'receptionist',
         'scheduler', 'patient access', 'registration', 'medical records',
         'health information', 'director', 'manager', 'supervisor', 'front desk',
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'operations manager',
+        'facilities', 'housekeeping', 'environmental services', 'food service',
+        'nutrition', 'dietary', 'security', 'maintenance', 'biomedical', 'biomed',
     ],
     'Marketing': [
         'marketing', 'brand', 'communications', 'social media', 'public relations',
-    ],
-    'Facilities / Support Services': [
-        'facilities', 'housekeeping', 'environmental services', 'food service',
-        'nutrition', 'dietary', 'security', 'maintenance', 'biomedical', 'biomed',
     ],
     'Quality': [
         'quality', 'infection control', 'patient safety', 'risk management', 'compliance',

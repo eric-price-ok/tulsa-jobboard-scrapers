@@ -47,31 +47,28 @@ _FUNCTION_KEYWORDS = {
     'Machinist': [
         'machinist', 'cnc', 'lathe', 'mill', 'grinder', 'machine operator'
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'welder', 'electrician', 'mechanic', 'technician', 'maintenance',
         'repair', 'installer', 'fitter', 'pipefitter'
     ],
     'Quality': [
         'quality', 'qa', 'qc', 'inspector', 'assurance', 'control'
     ],
-    'Transportation/Logistics': [
-        'transportation', 'logistics', 'shipping', 'warehouse', 'forklift',
-        'driver', 'delivery', 'material handler', 'inventory'
+    'Engineering': [
+        'mechanical', 'mech eng', 'mechanical engineer', 'electrical', 'elec eng',
+        'electrical engineer', 'civil', 'civil engineer', 'process engineer',
+        'industrial engineer', 'design engineer',
     ],
-    'Engineering, Mechanical': ['mechanical', 'mech eng', 'mechanical engineer'],
-    'Engineering, Electrical': ['electrical', 'elec eng', 'electrical engineer'],
-    'Engineering, Civil': ['civil', 'civil engineer'],
-    'Engineering, Other': ['process engineer', 'industrial engineer', 'design engineer'],
     'Information Technology': [
         'software', 'developer', 'programmer', 'engineer', 'data',
         'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'scrum', 'agile'
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller',
         'audit', 'bookkeeping', 'clerk', 'accounting clerk'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'help desk', 'call center', 'client',
         'representative', 'relationship'
     ],
@@ -81,12 +78,16 @@ _FUNCTION_KEYWORDS = {
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
     'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
     'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-    'Operations': ['operations', 'ops', 'supply chain', 'process', 'facility'],
-    'Project Management': ['project manager', 'program manager', 'scrum master', 'project coordinator'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Operations': [
+        'operations', 'ops', 'supply chain', 'process', 'facility',
+        'transportation', 'logistics', 'shipping', 'warehouse', 'forklift',
+        'driver', 'delivery', 'material handler', 'inventory',
+        'project manager', 'program manager', 'scrum master', 'project coordinator',
+    ],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Security': ['security', 'safety', 'guard', 'protection'],
     'Purchasing': ['purchasing', 'buyer', 'procurement', 'sourcing'],
-    'Research': ['research', 'development', 'r&d', 'scientist']
+    'Science': ['research', 'development', 'r&d', 'scientist']
 }
 
 

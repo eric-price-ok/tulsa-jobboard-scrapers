@@ -40,26 +40,26 @@ logger = logging.getLogger(__name__)
 
 # Transportation-focused function keyword mapping for a trucking company
 _FUNCTION_KEYWORDS = {
-    'Transportation/Logistics': [
+    'Maintenance': ['maintenance', 'mechanic', 'technician', 'repair', 'diesel', 'shop'],
+    'Operations': [
+        'operations', 'safety manager', 'compliance manager',
         'driver', 'cdl', 'truck', 'transportation', 'logistics', 'dispatch',
         'fleet', 'freight', 'cargo', 'delivery', 'route', 'transport', 'haul',
-        'operator', 'otr', 'terminal'
+        'operator', 'otr', 'terminal',
     ],
-    'Maintenance': ['maintenance', 'mechanic', 'technician', 'repair', 'diesel', 'shop'],
-    'Operations': ['operations', 'safety manager', 'compliance manager'],
     'Information Technology': [
         'software', 'developer', 'engineer', 'data', 'analyst', 'database',
         'system', 'network', 'it', 'technology', 'tech'
     ],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'payroll', 'benefits'],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'controller'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'controller'],
     'Sales': ['sales', 'business development', 'account manager'],
     'Marketing': ['marketing', 'communications', 'brand'],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'manager',
         'director', 'executive', 'president', 'supervisor'
     ],
-    'Customer Service': ['customer service', 'support', 'representative'],
+    'Customer Support': ['customer service', 'support', 'representative'],
     'Security': ['security', 'safety officer'],
     'Legal': ['legal', 'compliance officer', 'attorney'],
 }

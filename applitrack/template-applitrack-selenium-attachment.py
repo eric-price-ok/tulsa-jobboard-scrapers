@@ -55,11 +55,11 @@ logger = logging.getLogger(__name__)
 
 # Adjust keywords to match the district's typical position types
 _FUNCTION_KEYWORDS = {
-    'Administration': [
+    'Administrative': [
         'principal', 'assistant principal', 'superintendent', 'director',
         'coordinator', 'supervisor', 'admin', 'leadership', 'administration'
     ],
-    'Education/Training': [
+    'Education': [
         'teacher', 'instructor', 'educator', 'faculty', 'classroom',
         'special education', 'librarian', 'counselor', 'speech',
         'occupational therapist'
@@ -67,10 +67,10 @@ _FUNCTION_KEYWORDS = {
     'Information Technology': [
         'technology', 'computer', 'network', 'systems', 'tech support'
     ],
-    'Transportation/Logistics': [
+    'Operations': [
         'bus', 'driver', 'transportation', 'mechanic', 'fleet'
     ],
-    'Finance': [
+    'Accounting': [
         'business manager', 'finance clerk', 'accounting', 'bookkeeper', 'payroll'
     ],
     'Security': [

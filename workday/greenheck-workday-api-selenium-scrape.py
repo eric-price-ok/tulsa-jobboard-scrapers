@@ -35,14 +35,12 @@ _FUNCTION_KEYWORDS = {
         'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'cyber'
     ],
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical', 'mech eng', 'mechanical engineer', 'hvac engineer',
         'ventilation engineer', 'air handling', 'fan engineer', 'product engineer',
-        'design engineer', 'applications engineer', 'thermal engineer'
-    ],
-    'Engineering, Electrical': [
+        'design engineer', 'applications engineer', 'thermal engineer',
         'electrical', 'elec eng', 'electrical engineer', 'electronics',
-        'embedded systems', 'firmware', 'hardware', 'controls engineer'
+        'embedded systems', 'firmware', 'hardware', 'controls engineer',
     ],
     'Manufacturing': [
         'manufacturing', 'production', 'assembly', 'factory', 'plant',
@@ -54,15 +52,15 @@ _FUNCTION_KEYWORDS = {
         'hvac sales', 'commercial sales', 'field sales', 'regional sales',
         'account executive', 'sales engineer', 'applications sales'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'technical support', 'field service',
         'service technician', 'customer success', 'help desk', 'client support'
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'product manager', 'operations',
         'business analyst', 'process improvement', 'operations manager'
     ],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
     'Marketing': [
         'marketing', 'brand', 'digital marketing', 'content', 'social media',
@@ -76,11 +74,11 @@ _FUNCTION_KEYWORDS = {
         'quality', 'qa', 'qc', 'inspector', 'assurance',
         'quality engineer', 'test engineer', 'quality control'
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'maintenance', 'mechanic', 'installer', 'field technician',
         'service tech', 'repair', 'assembly technician', 'welder'
     ],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Security': ['security', 'safety', 'guard', 'protection']
 }
 

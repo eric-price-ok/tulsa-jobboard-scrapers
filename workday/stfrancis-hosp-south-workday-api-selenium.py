@@ -62,18 +62,14 @@ def _parse_salary_from_text(text: str) -> Tuple[Optional[float], Optional[float]
 
 
 _FUNCTION_KEYWORDS = {
-    'Nursing': [
+    'Healthcare': [
         'nurse', 'nursing', 'rn', 'lpn', 'cna', 'registered nurse', 'licensed practical',
         'certified nursing', 'nurse practitioner', 'clinical nurse',
-    ],
-    'Clinical / Allied Health': [
         'therapist', 'therapy', 'technologist', 'technician', 'radiology', 'imaging',
         'laboratory', 'lab', 'phlebotomy', 'phlebotomist', 'respiratory', 'surgical',
         'pharmacy', 'pharmacist', 'ultrasound', 'sonographer', 'diagnostic',
         'rehabilitation', 'physical therapy', 'occupational therapy', 'speech',
         'medical assistant', 'paramedic', 'emt', 'sterile processing',
-    ],
-    'Physicians / Medical Staff': [
         'physician', 'doctor', 'md', 'do', 'surgeon', 'hospitalist', 'specialist',
         'anesthesiologist', 'radiologist', 'pathologist', 'cardiologist',
     ],
@@ -83,7 +79,7 @@ _FUNCTION_KEYWORDS = {
         'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber', 'epic', 'ehr', 'emr',
         'informatics', 'it support', 'helpdesk',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'audit', 'billing',
         'revenue cycle', 'coding', 'coder', 'biller', 'reimbursement',
     ],
@@ -91,21 +87,19 @@ _FUNCTION_KEYWORDS = {
         'hr', 'human resources', 'recruiter', 'talent', 'benefits', 'payroll',
         'workforce',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'receptionist',
         'scheduler', 'patient access', 'registration', 'medical records',
         'health information', 'director', 'manager', 'supervisor',
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'operations manager',
-    ],
-    'Marketing': [
-        'marketing', 'brand', 'communications', 'social media', 'public relations',
-    ],
-    'Facilities / Support Services': [
         'facilities', 'housekeeping', 'environmental services', 'food service',
         'nutrition', 'dietary', 'linen', 'laundry', 'security', 'maintenance',
         'biomedical', 'biomed', 'engineer', 'engineering',
+    ],
+    'Marketing': [
+        'marketing', 'brand', 'communications', 'social media', 'public relations',
     ],
     'Social Services': [
         'social worker', 'social work', 'case manager', 'case management',

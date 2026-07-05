@@ -55,19 +55,19 @@ FILTER_TO_TULSA = False
 
 _FUNCTION_KEYWORDS = {
     'Sales': ['sales', 'account manager', 'business development', 'account executive'],
-    'Customer Service': ['customer service', 'support', 'client', 'experience'],
+    'Customer Support': ['customer service', 'support', 'client', 'experience'],
     'Information Technology': [
         'software', 'developer', 'data', 'system', 'network', 'it ',
         'technology', 'cyber', 'devops', 'cloud',
     ],
-    'Project Management': ['project manager', 'program manager', 'operations manager'],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
+    'Operations': ['project manager', 'program manager', 'operations manager'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'benefits'],
     'Marketing': ['marketing', 'brand', 'communications', 'social media'],
     'Legal': ['legal', 'attorney', 'counsel', 'compliance', 'contract'],
-    'Skilled Labor': ['technician', 'maintenance', 'mechanic', 'installer', 'delivery', 'warehouse', 'driver'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant'],
-    'Management': ['manager', 'director', 'supervisor', 'lead'],
+    'Skilled Trades': ['technician', 'maintenance', 'mechanic', 'installer', 'delivery', 'warehouse', 'driver'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant'],
+    'Executive': ['manager', 'director', 'supervisor', 'lead'],
 }
 
 

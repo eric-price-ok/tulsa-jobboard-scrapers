@@ -43,21 +43,23 @@ _FUNCTION_KEYWORDS = {
         'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'testing',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller',
         'audit', 'loan', 'credit',
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'help desk', 'call center', 'client', 'representative',
     ],
     'Sales': ['sales', 'account manager', 'business development', 'revenue'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
     'Marketing': ['marketing', 'brand', 'content', 'social media', 'communications'],
     'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-    'Operations': ['operations', 'ops', 'logistics', 'facility'],
-    'Project Management': ['project manager', 'program manager', 'project coordinator'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
-    'Management': ['manager', 'director', 'supervisor', 'lead', 'executive'],
+    'Operations': [
+        'operations', 'ops', 'logistics', 'facility',
+        'project manager', 'program manager', 'project coordinator',
+    ],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Executive': ['manager', 'director', 'supervisor', 'lead', 'executive'],
 }
 
 logger = logging.getLogger(__name__)

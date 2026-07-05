@@ -44,16 +44,16 @@ logger = logging.getLogger(__name__)
 
 # Banking-focused function keyword mapping
 _FUNCTION_KEYWORDS = {
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'treasury', 'controller', 'audit', 'loan', 'credit',
         'banking', 'loan officer', 'mortgage', 'commercial lending', 'credit analyst',
-        'underwriter'
+        'underwriter', 'accounting', 'accountant', 'bookkeeping', 'clerk', 'accounting clerk'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'teller', 'banker', 'representative',
         'relationship', 'customer'
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'manager', 'director',
         'supervisor', 'lead', 'executive', 'president', 'vice president', 'branch manager'
     ],
@@ -70,7 +70,6 @@ _FUNCTION_KEYWORDS = {
     'Marketing': [
         'marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'
     ],
-    'Accounting': ['accounting', 'accountant', 'bookkeeping', 'clerk', 'accounting clerk'],
     'Security': ['security', 'safety', 'guard', 'protection'],
 }
 

@@ -37,31 +37,28 @@ COMPANY_NAME = 'TD Williamson'
 SOURCE_JOB_BOARD = 'TDW Workday'
 
 _FUNCTION_KEYWORDS = {
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical engineer', 'mechanical', 'pipeline engineer', 'pipeline',
         'process engineer', 'process', 'piping', 'pressure', 'integrity engineer',
         'integrity', 'corrosion', 'inspection engineer', 'facilities engineer',
-    ],
-    'Engineering, Electrical': [
         'electrical engineer', 'electrical', 'instrumentation', 'controls',
-        'automation', 'i&e', 'electronics',
+        'automation', 'i&e', 'electronics', 'civil engineer', 'civil', 'structural',
     ],
-    'Engineering, Civil': ['civil engineer', 'civil', 'structural'],
     'Information Technology': [
         'software', 'developer', 'programmer', 'data scientist', 'data engineer',
         'database', 'network', 'devops', 'cloud', 'cybersecurity',
         'cyber', 'application', 'web', 'mobile', 'scrum', 'agile',
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'project management', 'program manager',
         'project coordinator', 'planning', 'scheduler', 'project engineer',
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'operator', 'mechanic', 'welder', 'electrician',
         'maintenance', 'field', 'crew', 'journeyman', 'apprentice',
         'service technician', 'field technician', 'tool technician',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'controller',
         'audit', 'treasury', 'budget',
     ],
@@ -84,14 +81,14 @@ _FUNCTION_KEYWORDS = {
         'quality', 'qa', 'qc', 'inspector', 'quality engineer', 'ndt',
         'non-destructive', 'testing',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'specialist',
         'office', 'clerical', 'receptionist',
     ],
     'Marketing': [
         'marketing', 'brand', 'communications', 'social media', 'content',
     ],
-    'Supply Chain': [
+    'Purchasing': [
         'supply chain', 'logistics', 'procurement', 'purchasing', 'warehouse',
         'inventory', 'shipping', 'receiving',
     ],

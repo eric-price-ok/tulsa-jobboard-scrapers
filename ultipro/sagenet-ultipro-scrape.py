@@ -41,13 +41,13 @@ _FUNCTION_KEYWORDS = {
         'technician', 'analyst', 'it ', 'telecom', 'wireless', 'iot',
     ],
     'Sales': ['sales', 'account manager', 'business development', 'account executive'],
-    'Customer Service': ['customer service', 'support', 'client'],
-    'Project Management': ['project manager', 'program manager', 'operations manager'],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
+    'Customer Support': ['customer service', 'support', 'client'],
+    'Operations': ['project manager', 'program manager', 'operations manager'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'audit'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'benefits'],
     'Marketing': ['marketing', 'brand', 'communications'],
     'Legal': ['legal', 'attorney', 'counsel', 'compliance', 'contract'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant'],
 }
 
 

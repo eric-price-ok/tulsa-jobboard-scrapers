@@ -241,18 +241,18 @@ class DatabaseManager:
                 'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'cyber'
             ],
-            'Administration': [
+            'Administrative': [
                 'admin', 'administrative', 'coordinator', 'assistant', 'office', 'clerk',
                 'secretary', 'records', 'filing', 'data entry', 'receptionist'
             ],
-            'Finance': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit', 'payroll'],
+            'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit', 'payroll'],
             'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
             'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-            'Project Management': ['project manager', 'program manager', 'coordinator'],
-            'Customer Service': ['customer service', 'support', 'help desk', 'call center', 'client', 'public'],
-            'Healthcare Provider': ['nurse', 'doctor', 'medical', 'healthcare', 'clinical', 'physician', 'emt', 'paramedic'],
-            'Skilled Labor': ['maintenance', 'mechanic', 'technician', 'facilities', 'custodial', 'grounds'],
-            'Communications': ['communications', 'dispatch', 'dispatcher', 'radio', '911', 'emergency']
+            'Operations': ['project manager', 'program manager', 'coordinator'],
+            'Customer Support': ['customer service', 'support', 'help desk', 'call center', 'client', 'public'],
+            'Healthcare': ['nurse', 'doctor', 'medical', 'healthcare', 'clinical', 'physician', 'emt', 'paramedic'],
+            'Skilled Trades': ['maintenance', 'mechanic', 'technician', 'facilities', 'custodial', 'grounds'],
+            'Marketing': ['communications', 'dispatch', 'dispatcher', 'radio', '911', 'emergency']
         }
         
         # Try to match keywords

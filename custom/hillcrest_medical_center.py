@@ -151,52 +151,48 @@ class DatabaseManager:
         
         # Define hospital-specific function mapping keywords
         function_keywords = {
-            'Healthcare Provider': [
+            'Healthcare': [
                 'nurse', 'rn', 'lpn', 'cna', 'doctor', 'physician', 'surgeon', 'therapist',
                 'medical assistant', 'paramedic', 'emt', 'practitioner', 'specialist',
                 'anesthesia', 'respiratory', 'physical therapy', 'occupational therapy',
-                'speech therapy', 'social worker', 'chaplain', 'dietitian', 'nutritionist'
-            ],
-            'Clinical Support': [
+                'speech therapy', 'social worker', 'chaplain', 'dietitian', 'nutritionist',
                 'lab', 'laboratory', 'phlebotomist', 'radiology', 'imaging', 'ultrasound',
                 'mri', 'ct', 'x-ray', 'pharmacy', 'pharmacist', 'technician', 'tech',
                 'medical records', 'coding', 'health information', 'sterile processing',
-                'surgical tech', 'operating room', 'or tech', 'cardiology', 'echo'
+                'surgical tech', 'operating room', 'or tech', 'cardiology', 'echo',
             ],
             'Information Technology': [
-                'software', 'developer', 'programmer', 'engineer', 'data', 
+                'software', 'developer', 'programmer', 'engineer', 'data',
                 'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'epic',
                 'cerner', 'health information systems'
             ],
-            'Administration': [
+            'Administrative': [
                 'admin', 'administrative', 'coordinator', 'assistant', 'office', 'clerk',
                 'secretary', 'receptionist', 'registration', 'admissions', 'discharge',
                 'case manager', 'utilization review', 'quality', 'compliance', 'risk'
             ],
-            'Finance': [
-                'finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 
+            'Accounting': [
+                'finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller',
                 'audit', 'billing', 'revenue cycle', 'patient accounts', 'collections'
             ],
             'Human Resources': [
                 'hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits',
                 'payroll', 'compensation', 'training', 'development'
             ],
-            'Facilities': [
+            'Operations': [
                 'maintenance', 'facility', 'facilities', 'engineering', 'hvac', 'plumbing',
                 'electrical', 'biomedical', 'environmental services', 'housekeeping',
-                'custodial', 'groundskeeper', 'plant operations'
+                'custodial', 'groundskeeper', 'plant operations',
+                'transport', 'driver', 'ambulance', 'patient transport', 'courier',
             ],
-            'Food Service': [
+            'Hospitality': [
                 'food', 'kitchen', 'cook', 'chef', 'dietary', 'nutrition', 'cafeteria',
                 'food service', 'culinary'
             ],
             'Security': [
                 'security', 'safety', 'guard', 'protection', 'emergency management'
             ],
-            'Transportation': [
-                'transport', 'driver', 'ambulance', 'patient transport', 'courier'
-            ]
         }
         
         # Try to match keywords

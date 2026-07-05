@@ -137,23 +137,26 @@ class DatabaseManager:
                 'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'cyber'
             ],
-            'Engineering, Mechanical': ['mechanical', 'mech eng', 'mechanical engineer'],
-            'Engineering, Electrical': ['electrical', 'elec eng', 'electrical engineer'],
-            'Engineering, Civil': ['civil', 'civil engineer'],
-            'Finance': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
+            'Engineering': [
+                'mechanical', 'mech eng', 'mechanical engineer', 'electrical', 'elec eng',
+                'electrical engineer', 'civil', 'civil engineer',
+            ],
+            'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
             'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
             'Sales': ['sales', 'account manager', 'business development', 'bd', 'revenue'],
             'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
             'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-            'Operations': ['operations', 'ops', 'supply chain', 'logistics', 'process', 'facility'],
-            'Project Management': ['project manager', 'program manager', 'scrum master', 'project coordinator'],
-            'Customer Service': ['customer service', 'support', 'help desk', 'call center', 'client'],
-            'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+            'Operations': [
+                'operations', 'ops', 'supply chain', 'logistics', 'process', 'facility',
+                'project manager', 'program manager', 'scrum master', 'project coordinator',
+            ],
+            'Customer Support': ['customer service', 'support', 'help desk', 'call center', 'client'],
+            'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
             'Manufacturing': ['manufacturing', 'production', 'plant', 'facility', 'assembly'],
             'Quality': ['quality', 'qa', 'qc', 'testing', 'inspector', 'assurance'],
             'Security': ['security', 'safety', 'guard', 'protection'],
-            'Skilled Labor': ['operator', 'technician', 'maintenance', 'mechanic', 'welder', 'electrician'],
-            'Healthcare Provider': ['nurse', 'doctor', 'medical', 'healthcare', 'clinical', 'physician']
+            'Skilled Trades': ['operator', 'technician', 'maintenance', 'mechanic', 'welder', 'electrician'],
+            'Healthcare': ['nurse', 'doctor', 'medical', 'healthcare', 'clinical', 'physician']
         }
         
         # Try to match keywords

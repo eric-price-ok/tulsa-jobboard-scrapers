@@ -65,20 +65,16 @@ def _parse_salary_from_text(text: str) -> Tuple[Optional[float], Optional[float]
 
 
 _FUNCTION_KEYWORDS = {
-    'Nursing': [
+    'Healthcare': [
         'nurse', 'nursing', 'rn', 'lpn', 'cna', 'registered nurse', 'licensed practical',
         'certified nursing', 'nurse practitioner', 'clinical nurse',
-    ],
-    'Clinical / Allied Health': [
         'therapist', 'therapy', 'technologist', 'technician', 'lab', 'laboratory',
         'phlebotom', 'radiology', 'imaging', 'ultrasound', 'sonographer', 'x-ray',
         'mri', 'ct scan', 'respiratory', 'pharmacy', 'pharmacist',
         'medical assistant', 'social worker', 'social work', 'case manager',
         'care coordinator', 'physical therapy', 'occupational therapy', 'speech',
-    ],
-    'Physicians / Medical Staff': [
         'physician', 'doctor', 'md', 'do', 'hospitalist', 'specialist',
-        'nurse practitioner', 'physician assistant', 'anesthesiologist',
+        'physician assistant', 'anesthesiologist',
     ],
     'Information Technology': [
         'software', 'developer', 'programmer', 'data', 'analyst', 'database',
@@ -86,7 +82,7 @@ _FUNCTION_KEYWORDS = {
         'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber', 'epic', 'ehr', 'emr',
         'informatics', 'it support', 'helpdesk',
     ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'audit', 'billing',
         'revenue cycle', 'coding', 'coder', 'biller', 'reimbursement',
     ],
@@ -94,20 +90,18 @@ _FUNCTION_KEYWORDS = {
         'hr', 'human resources', 'recruiter', 'talent', 'benefits', 'payroll',
         'workforce',
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'receptionist',
         'scheduler', 'patient access', 'registration', 'medical records',
         'health information', 'director', 'manager', 'supervisor', 'front desk',
     ],
-    'Project Management': [
+    'Operations': [
         'project manager', 'program manager', 'operations manager',
+        'facilities', 'housekeeping', 'environmental services', 'food service',
+        'nutrition', 'dietary', 'security', 'maintenance', 'biomedical', 'biomed',
     ],
     'Marketing': [
         'marketing', 'brand', 'communications', 'social media', 'public relations',
-    ],
-    'Facilities / Support Services': [
-        'facilities', 'housekeeping', 'environmental services', 'food service',
-        'nutrition', 'dietary', 'security', 'maintenance', 'biomedical', 'biomed',
     ],
     'Quality': [
         'quality', 'infection control', 'patient safety', 'risk management', 'compliance',

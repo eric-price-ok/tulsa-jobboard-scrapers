@@ -167,21 +167,22 @@ class DatabaseManager:
             # Try keyword-based mapping
             function_keywords = {
                 'Information Technology': ['technology', 'software', 'data', 'systems'],
-                'Engineering, Mechanical': ['mechanical', 'mech eng', 'mechanical engineer'],
-                'Engineering, Electrical': ['electrical', 'elec eng', 'electrical engineer', 'controls'],
-                'Engineering, Civil': ['civil', 'civil engineer'],
-                'Engineering, Other': ['engineering', 'engineer'],
+                'Engineering': [
+                    'mechanical', 'mech eng', 'mechanical engineer', 'electrical', 'elec eng',
+                    'electrical engineer', 'controls', 'civil', 'civil engineer',
+                    'engineering', 'engineer',
+                ],
                 'Manufacturing': ['manufacturing', 'production', 'assembly', 'plant', 'facility'],
                 'Machinist': ['machinist', 'cnc', 'lathe', 'mill', 'machine operator'],
-                'Skilled Labor': ['maintenance', 'technician', 'operator', 'welder', 'electrician'],
+                'Skilled Trades': ['maintenance', 'technician', 'operator', 'welder', 'electrician'],
                 'Quality': ['quality', 'qa', 'qc', 'inspection', 'inspector'],
-                'Finance': ['finance', 'financial', 'accounting'],
+                'Accounting': ['finance', 'financial', 'accounting'],
                 'Human Resources': ['hr', 'human resources', 'people'],
                 'Sales': ['sales', 'business development'],
                 'Marketing': ['marketing', 'communications'],
                 'Operations': ['operations', 'logistics'],
-                'Administration': ['admin', 'administrative'],
-                'Customer Service': ['customer', 'service', 'support'],
+                'Administrative': ['admin', 'administrative'],
+                'Customer Support': ['customer', 'service', 'support'],
                 'Security': ['security', 'safety'],
                 'Legal': ['legal', 'compliance']
             }

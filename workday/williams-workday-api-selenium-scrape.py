@@ -36,38 +36,29 @@ _FUNCTION_KEYWORDS = {
         'analyst', 'database', 'system', 'network', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber'
     ],
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical', 'mech eng', 'mechanical engineer', 'pipeline', 'compressor',
         'facilities', 'plant engineer', 'process engineer', 'compression',
         'gas processing', 'midstream', 'facility engineer', 'rotating equipment',
-        'turbine', 'pump', 'valve'
-    ],
-    'Engineering, Electrical': [
+        'turbine', 'pump', 'valve',
         'electrical', 'elec eng', 'electrical engineer', 'instrumentation', 'controls',
-        'scada', 'automation', 'control systems', 'plc', 'dcs'
+        'scada', 'automation', 'control systems', 'plc', 'dcs',
+        'civil', 'civil engineer', 'structural', 'geotechnical',
+        'chemical engineer', 'petroleum engineer', 'reliability engineer',
+        'corrosion engineer',
     ],
-    'Engineering, Civil': [
-        'civil', 'civil engineer', 'structural', 'geotechnical'
-    ],
-    'Engineering, Other': [
-        'chemical engineer', 'petroleum engineer', 'process engineer',
-        'reliability engineer', 'corrosion engineer'
-    ],
-    'Project Management': [
+    'Operations': [
         'operations', 'ops', 'plant', 'facility', 'gas plant', 'processing',
         'dispatch', 'pipeline operations', 'gas transportation', 'midstream operations',
-        'project manager', 'program manager', 'scrum master', 'project coordinator'
+        'project manager', 'program manager', 'scrum master', 'project coordinator',
+        'logistics', 'supply chain', 'transportation', 'shipping', 'distribution',
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'maintenance', 'mechanic', 'welder', 'electrician',
         'apprentice', 'journeyman', 'crew', 'field', 'pipeline technician',
         'compression technician', 'field operations', 'operator', 'control room'
     ],
-    'Transportation/Logistics': [
-        'pipeline operations', 'gas transportation', 'logistics', 'supply chain',
-        'transportation', 'shipping', 'distribution'
-    ],
-    'Finance': [
+    'Accounting': [
         'finance', 'financial', 'accounting', 'accountant', 'treasury',
         'controller', 'audit', 'tax', 'budget'
     ],
@@ -87,10 +78,10 @@ _FUNCTION_KEYWORDS = {
         'legal', 'attorney', 'lawyer', 'counsel', 'compliance',
         'contract', 'regulatory', 'paralegal'
     ],
-    'Customer Service': [
+    'Customer Support': [
         'customer service', 'support', 'help desk', 'call center', 'client'
     ],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'office', 'clerk'
     ],
     'Quality': [
@@ -102,7 +93,7 @@ _FUNCTION_KEYWORDS = {
     'Purchasing': [
         'purchasing', 'procurement', 'buyer', 'sourcing', 'vendor'
     ],
-    'Research': [
+    'Science': [
         'research', 'r&d', 'development', 'innovation', 'scientist'
     ],
 }

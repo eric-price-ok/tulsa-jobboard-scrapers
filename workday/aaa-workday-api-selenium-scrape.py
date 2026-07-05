@@ -133,7 +133,7 @@ class DatabaseManager:
                 'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile'
             ],
-            'Customer Service': [
+            'Customer Support': [
                 'customer service', 'support', 'help desk', 'call center', 'client',
                 'member services', 'roadside', 'claims', 'insurance', 'member', 'representative'
             ],
@@ -141,13 +141,15 @@ class DatabaseManager:
                 'sales', 'account manager', 'business development', 'bd', 'revenue',
                 'membership', 'agent', 'representative'
             ],
-            'Finance': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
+            'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
             'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefits'],
             'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
             'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract'],
-            'Operations': ['operations', 'ops', 'supply chain', 'logistics', 'process', 'facility'],
-            'Project Management': ['project manager', 'program manager', 'scrum master', 'project coordinator'],
-            'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+            'Operations': [
+                'operations', 'ops', 'supply chain', 'logistics', 'process', 'facility',
+                'project manager', 'program manager', 'scrum master', 'project coordinator',
+            ],
+            'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
             'Quality': ['quality', 'qa', 'qc', 'testing', 'inspector', 'assurance'],
             'Security': ['security', 'safety', 'guard', 'protection']
         }

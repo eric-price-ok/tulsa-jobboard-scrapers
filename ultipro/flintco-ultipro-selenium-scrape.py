@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 # Construction-focused function keyword mapping
 _FUNCTION_KEYWORDS = {
-    'Construction/Trades': [
+    'Skilled Trades': [
         'superintendent', 'foreman', 'carpenter', 'concrete', 'ironworker',
         'welder', 'pipefitter', 'electrician', 'plumber', 'mason', 'laborer',
         'millwright', 'boilermaker', 'insulator', 'roofer', 'glazier',
@@ -61,32 +61,28 @@ _FUNCTION_KEYWORDS = {
         'mechanical', 'civil', 'electrical', 'mep', 'bim', 'estimator',
         'cost engineer', 'quantity surveyor'
     ],
-    'Project Management': [
-        'project manager', 'project director', 'project executive',
-        'program manager', 'project coordinator', 'project controls',
-        'scheduler', 'planning'
-    ],
-    'Safety': [
-        'safety', 'ehs', 'hse', 'health and safety', 'environmental',
-        'osha', 'risk management', 'loss prevention'
-    ],
     'Operations': [
         'operations', 'general manager', 'regional manager', 'division manager',
-        'superintendent of operations', 'compliance', 'quality control', 'qc', 'qa'
+        'superintendent of operations', 'compliance', 'quality control', 'qc', 'qa',
+        'project manager', 'project director', 'project executive',
+        'program manager', 'project coordinator', 'project controls',
+        'scheduler', 'planning',
+        'safety', 'ehs', 'hse', 'health and safety', 'environmental',
+        'osha', 'risk management', 'loss prevention',
     ],
     'Information Technology': [
         'software', 'developer', 'engineer', 'data', 'analyst', 'database',
         'system', 'network', 'it', 'technology', 'tech'
     ],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'payroll', 'benefits'],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'controller', 'billing'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'controller', 'billing'],
     'Sales': ['sales', 'business development', 'account manager', 'preconstruction'],
     'Marketing': ['marketing', 'communications', 'brand'],
-    'Administration': [
+    'Administrative': [
         'admin', 'administrative', 'coordinator', 'assistant', 'director',
         'executive', 'president', 'supervisor', 'office manager'
     ],
-    'Customer Service': ['customer service', 'support', 'representative'],
+    'Customer Support': ['customer service', 'support', 'representative'],
     'Legal': ['legal', 'compliance officer', 'attorney', 'contracts'],
 }
 

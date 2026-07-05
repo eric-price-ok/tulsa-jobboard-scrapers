@@ -53,29 +53,27 @@ _FUNCTION_KEYWORDS = {
         'analyst', 'database', 'system', 'network', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber'
     ],
-    'Engineering, Mechanical': [
+    'Engineering': [
         'mechanical', 'mech eng', 'mechanical engineer', 'pipeline', 'compressor',
-        'facilities', 'plant engineer', 'process engineer'
+        'facilities', 'plant engineer', 'process engineer',
+        'electrical', 'elec eng', 'electrical engineer', 'instrumentation', 'controls',
+        'civil', 'civil engineer',
     ],
-    'Engineering, Electrical': [
-        'electrical', 'elec eng', 'electrical engineer', 'instrumentation', 'controls'
-    ],
-    'Engineering, Civil': ['civil', 'civil engineer'],
-    'Project Management': [
+    'Operations': [
         'operations', 'ops', 'plant', 'facility', 'gas plant', 'processing',
         'project manager', 'program manager', 'scrum master', 'project coordinator'
     ],
-    'Skilled Labor': [
+    'Skilled Trades': [
         'technician', 'maintenance', 'mechanic', 'welder', 'electrician',
         'apprentice', 'journeyman', 'crew', 'field', 'operator', 'control room'
     ],
-    'Finance': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
+    'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'treasury', 'controller', 'audit'],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people', 'benefit', 'compensation'],
     'Sales': ['sales', 'account manager', 'business development', 'bd', 'revenue'],
     'Marketing': ['marketing', 'brand', 'digital marketing', 'content', 'social media', 'communications'],
     'Legal': ['legal', 'attorney', 'lawyer', 'counsel', 'compliance', 'contract', 'regulatory'],
-    'Customer Service': ['customer service', 'support', 'help desk', 'call center', 'client'],
-    'Administration': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
+    'Customer Support': ['customer service', 'support', 'help desk', 'call center', 'client'],
+    'Administrative': ['admin', 'administrative', 'coordinator', 'assistant', 'office'],
     'Quality': ['quality', 'qa', 'qc', 'testing', 'inspector', 'assurance'],
     'Security': ['security', 'safety', 'guard', 'protection'],
 }
