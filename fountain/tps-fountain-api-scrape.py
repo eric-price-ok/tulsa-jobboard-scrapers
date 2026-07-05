@@ -114,6 +114,7 @@ from selenium.common.exceptions import TimeoutException
 from utils.selenium_config import SeleniumConfig
 
 from datetime import datetime
+from urllib.parse import urlparse
 import hashlib
 import os
 import re
@@ -636,11 +637,27 @@ class TulsaPublicSchoolsScraper:
         self.company_id = self.company_config['id']
         self.jobboard_url = self.company_config['jobboard'].rstrip('/')
 
+        # The public listing page (self.jobboard_url, used for the .json API)
+        # and the actual per-job apply/detail page live under different path
+        # shapes on web.fountain.com — confirmed by checking what a real
+        # listing click navigates to:
+        #   listing: https://web.fountain.com/c/tulsa-schools/tulsa-schools/US
+        #   detail:  https://web.fountain.com/apply/tulsa-schools/opening/<to_param>?brand_id=all
+        # An earlier version guessed the detail URL was just jobboard_url +
+        # "/<to_param>" — that path returns HTTP 200 but isn't a route the
+        # SPA's router recognizes as a job detail page, so it rendered no
+        # real content at all (0 characters of body text) rather than
+        # erroring, which made it hard to diagnose. The company slug is
+        # parsed from jobboard_url rather than hardcoded twice.
+        path_parts = [p for p in urlparse(self.jobboard_url).path.split('/') if p]
+        company_slug = path_parts[1] if len(path_parts) > 1 else 'tulsa-schools'
+        self.apply_base_url = f"https://web.fountain.com/apply/{company_slug}/opening"
+
         self.client = FountainClient()
         self.selenium_scraper = SeleniumJobScraper(headless=True)
 
     def build_posting_url(self, to_param: str) -> str:
-        return f"{self.jobboard_url}/{to_param}"
+        return f"{self.apply_base_url}/{to_param}?brand_id=all"
 
     def create_scraping_hash(self, title: str, url: str, description: str) -> str:
         return hashlib.md5(f"{title}{url}{description}".encode('utf-8')).hexdigest()
