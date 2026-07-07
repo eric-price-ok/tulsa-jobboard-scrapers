@@ -78,7 +78,7 @@ def _parse_salary_from_text(text: str) -> Tuple[Optional[float], Optional[float]
 # Keys must match names in the functions table. Add/remove categories as needed.
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
-        'software', 'developer', 'programmer', 'data', 'analyst', 'database',
+        'software', 'developer', 'programmer', 'data', 'database',
         'system', 'network', 'security', 'devops', 'cloud', 'application',
         'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber',
     ],

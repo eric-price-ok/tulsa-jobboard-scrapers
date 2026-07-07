@@ -58,7 +58,7 @@ _FUNCTION_KEYWORDS = {
         'supervisor', 'lead', 'executive', 'president', 'vice president', 'branch manager'
     ],
     'Information Technology': [
-        'software', 'developer', 'programmer', 'engineer', 'data', 'analyst', 'database',
+        'software', 'developer', 'programmer', 'engineer', 'data', 'database',
         'system', 'network', 'security', 'devops', 'cloud', 'application', 'web', 'mobile',
         'qa', 'testing', 'it'
     ],

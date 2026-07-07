@@ -163,7 +163,7 @@ class DatabaseManager:
             ],
             'Information Technology': [
                 'software', 'developer', 'programmer', 'engineer', 'data',
-                'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
+                'database', 'system', 'network', 'security', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'epic',
                 'cerner', 'health information systems'
             ],

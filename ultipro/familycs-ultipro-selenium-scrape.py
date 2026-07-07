@@ -56,7 +56,7 @@ _FUNCTION_KEYWORDS = {
         'early childhood', 'childcare'
     ],
     'Information Technology': [
-        'software', 'developer', 'data', 'analyst', 'it', 'technology', 'tech',
+        'software', 'developer', 'data', 'it', 'technology', 'tech',
         'system', 'network', 'database', 'engineer'
     ],
     'Human Resources': [

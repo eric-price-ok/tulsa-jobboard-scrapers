@@ -91,7 +91,7 @@ class DatabaseManager:
                 ],
                 'Information Technology': [
                     'it', 'technology', 'software', 'data', 'systems', 'network',
-                    'computer', 'analyst', 'developer', 'programmer'
+                    'computer', 'developer', 'programmer'
                 ],
                 'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'billing', 'revenue'],
                 'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people'],

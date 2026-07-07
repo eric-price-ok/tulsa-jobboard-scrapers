@@ -61,7 +61,7 @@ _FUNCTION_KEYWORDS = {
     ],
     'Information Technology': [
         'software', 'developer', 'programmer', 'engineer', 'data',
-        'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
+        'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'scrum', 'agile'
     ],
     'Accounting': [

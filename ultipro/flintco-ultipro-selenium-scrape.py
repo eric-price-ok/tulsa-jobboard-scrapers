@@ -71,7 +71,7 @@ _FUNCTION_KEYWORDS = {
         'osha', 'risk management', 'loss prevention',
     ],
     'Information Technology': [
-        'software', 'developer', 'engineer', 'data', 'analyst', 'database',
+        'software', 'developer', 'engineer', 'data', 'database',
         'system', 'network', 'it', 'technology', 'tech'
     ],
     'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'payroll', 'benefits'],

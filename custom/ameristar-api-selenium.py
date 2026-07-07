@@ -172,7 +172,7 @@ class DatabaseManager:
             ],
             'Information Technology': [
                 'software', 'developer', 'programmer', 'engineer',
-                'data', 'analyst', 'database', 'system', 'network'
+                'data', 'database', 'system', 'network'
             ],
             'Accounting': ['finance', 'financial', 'accounting', 'accountant', 'controller'],
             'Human Resources': ['hr', 'human resources', 'recruiter', 'talent', 'people'],

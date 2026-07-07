@@ -52,7 +52,7 @@ _FUNCTION_KEYWORDS = {
         'project engineer', 'process engineer', 'engineer',
     ],
     'Information Technology': [
-        'software', 'developer', 'programmer', 'data', 'analyst', 'database',
+        'software', 'developer', 'programmer', 'data', 'database',
         'network', 'devops', 'cloud', 'help desk', 'it support', 'cyber', 'erp',
     ],
     'Manufacturing': [

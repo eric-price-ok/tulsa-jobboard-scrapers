@@ -56,7 +56,7 @@ class DatabaseManager:
         function_keywords = {
             'Information Technology': [
                 'software', 'developer', 'programmer', 'engineer', 'tech', 'it ', 'data',
-                'analyst', 'database', 'system', 'network', 'devops', 'cloud',
+                'database', 'system', 'network', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'solutions architect',
                 'enterprise architect'
             ],

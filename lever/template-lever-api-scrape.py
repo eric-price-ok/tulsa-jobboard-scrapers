@@ -57,7 +57,7 @@ LEVER_API_URL = f'https://api.lever.co/v0/postings/{LEVER_SITE_SLUG}?mode=json'
 # title plus Lever's own categories.team / categories.department text.
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
-        'software', 'developer', 'programmer', 'data', 'analyst', 'database',
+        'software', 'developer', 'programmer', 'data', 'database',
         'network', 'devops', 'cloud', 'help desk', 'it support', 'cyber',
     ],
     'Sales': ['sales', 'account manager', 'business development', 'account executive'],

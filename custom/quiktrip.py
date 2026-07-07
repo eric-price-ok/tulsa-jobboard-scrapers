@@ -44,7 +44,7 @@ BASE_URL = 'https://careers.quiktrip.com/'
 # office functions (IT, accounting, etc.), warehouses, and its own trucking fleet.
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
-        'software', 'developer', 'programmer', 'data', 'analyst', 'database',
+        'software', 'developer', 'programmer', 'data', 'database',
         'system', 'network', 'security engineer', 'devops', 'cloud',
         'application', 'help desk', 'it support', 'cyber',
     ],

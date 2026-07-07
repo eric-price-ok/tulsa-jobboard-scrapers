@@ -38,7 +38,7 @@ _FUNCTION_KEYWORDS = {
         'system', 'network', 'security', 'devops', 'cloud', 'application',
         'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber', 'engineer',
         'architect', 'infrastructure', 'noc', 'helpdesk', 'help desk',
-        'technician', 'analyst', 'it ', 'telecom', 'wireless', 'iot',
+        'it ', 'telecom', 'wireless', 'iot',
     ],
     'Sales': ['sales', 'account manager', 'business development', 'account executive'],
     'Customer Support': ['customer service', 'support', 'client'],
