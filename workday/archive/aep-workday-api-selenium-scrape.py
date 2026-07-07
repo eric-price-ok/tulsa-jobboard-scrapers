@@ -855,7 +855,8 @@ def main():
         logger.error("Example: set POSTGRES_PASSWORD=your_password")
         return 1
     
-    db_connection = f"postgresql://postgres:{db_password}@192.168.250.13:5432/tulsa_jobs"
+    db_host = os.getenv('POSTGRES_HOST', 'localhost')
+    db_connection = f"postgresql://postgres:{db_password}@{db_host}:5432/tulsa_jobs"
     
     scraper = None
     try:
