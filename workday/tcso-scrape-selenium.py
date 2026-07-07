@@ -237,8 +237,8 @@ class DatabaseManager:
                 'jailer', 'jail', 'corrections', 'enforcement', 'police'
             ],
             'Information Technology': [
-                'software', 'developer', 'programmer', 'engineer', 'tech', 'it ', 'data', 
-                'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
+                'software', 'developer', 'programmer', 'engineer', 'tech', 'it ', 'data',
+                'database', 'system', 'network', 'security', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'cyber'
             ],
             'Administrative': [

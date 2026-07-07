@@ -73,7 +73,7 @@ _FUNCTION_KEYWORDS = {
     'Quality': ['quality', 'qa', 'qc', 'inspector', 'assurance'],
     'Security': ['safety', 'ehs', 'environmental health', 'security', 'guard'],
     'Information Technology': [
-        'software', 'developer', 'data', 'analyst', 'network', 'systems',
+        'software', 'developer', 'data', 'network', 'systems',
         'database', 'cyber', 'application', 'it support',
     ],
     'Accounting': [

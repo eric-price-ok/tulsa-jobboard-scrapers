@@ -78,7 +78,7 @@ _FUNCTION_KEYWORDS = {
         'physician assistant',
     ],
     'Information Technology': [
-        'software', 'developer', 'programmer', 'data', 'analyst', 'database',
+        'software', 'developer', 'programmer', 'data', 'database',
         'system', 'network', 'security', 'devops', 'cloud', 'application',
         'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber', 'epic', 'ehr', 'emr',
         'informatics', 'it support', 'helpdesk',

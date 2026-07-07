@@ -133,8 +133,8 @@ class DatabaseManager:
         # Define function mapping keywords
         function_keywords = {
             'Information Technology': [
-                'software', 'developer', 'programmer', 'engineer', 'tech', 'it ', 'data', 
-                'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
+                'software', 'developer', 'programmer', 'engineer', 'tech', 'it ', 'data',
+                'database', 'system', 'network', 'security', 'devops', 'cloud',
                 'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'cyber'
             ],
             'Engineering': [

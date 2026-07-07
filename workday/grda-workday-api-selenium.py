@@ -47,7 +47,7 @@ _FUNCTION_KEYWORDS = {
         'civil engineer', 'civil', 'structural', 'dam safety', 'geotechnical',
     ],
     'Information Technology': [
-        'software', 'developer', 'programmer', 'data', 'analyst', 'database',
+        'software', 'developer', 'programmer', 'data', 'database',
         'network', 'devops', 'cloud', 'application', 'cybersecurity', 'cyber',
         'gis', 'help desk', 'it support',
     ],

@@ -49,7 +49,7 @@ SOURCE_JOB_BOARD = 'AAA Workday Scraper'
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
         'software', 'developer', 'programmer', 'tech', 'data',
-        'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
+        'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile',
     ],
     'Customer Support': [

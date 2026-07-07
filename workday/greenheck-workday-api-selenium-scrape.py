@@ -32,7 +32,7 @@ logger = setup_logging('Greenheck Group')
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
         'software', 'developer', 'programmer', 'engineer', 'tech', 'it ', 'data',
-        'analyst', 'database', 'system', 'network', 'security', 'devops', 'cloud',
+        'database', 'system', 'network', 'security', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'testing', 'scrum', 'agile', 'cyber'
     ],
     'Engineering': [

@@ -51,7 +51,7 @@ _CATEGORY_MAPPINGS = {
 _FUNCTION_KEYWORDS = {
     'Information Technology': [
         'software', 'developer', 'programmer', 'data',
-        'analyst', 'database', 'system', 'network', 'devops', 'cloud',
+        'database', 'system', 'network', 'devops', 'cloud',
         'application', 'web', 'mobile', 'qa', 'scrum', 'agile', 'cyber'
     ],
     'Sales': [
