@@ -74,7 +74,7 @@
 | AEP | `workday/archive/aep-workday-api-selenium-scrape.py` | Gen 1+ | Deprecated |
 | Airgas | `workday/airgas-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
 | Aristocrat | `workday/aristocrat-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
-| ChampionX | `workday/championx-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
+| ChampionX | `workday/archive/championx-workday-api-selenium-scrape.py` | Gen 1+ | Deprecated |
 | ChampionX (SLB) | `workday/championx-slb-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
 | ConocoPhillips | `workday/conocophillips-workday-api-selenium.py` | Gen 2 | Confirmed |
 | Grand River Dam Authority (GRDA) | `workday/grda-workday-api-selenium.py` | Gen 2 | Confirmed |
