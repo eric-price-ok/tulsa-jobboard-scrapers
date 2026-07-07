@@ -1,8 +1,8 @@
-selenium
-beautifulsoup4
-psycopg[binary]
-requests
-anthropic
-mammoth
-PyPDF2
-webdriver-manager
+selenium~=4.45
+beautifulsoup4~=4.15
+psycopg[binary]~=3.3
+requests~=2.34
+anthropic~=0.116.0
+mammoth~=1.12
+PyPDF2~=3.0
+webdriver-manager~=4.1
