@@ -25,9 +25,9 @@
 
 | Company | File | Gen | Status |
 |---------|------|-----|--------|
-| Broken Arrow Public Schools | `applitrack/baps-applitrack-selenium.py` | Gen 1+ | Unconfirmed |
-| Coweta Public Schools | `applitrack/cowetaps-applitrack-selenium.py` | Gen 1+ | Unconfirmed |
-| Owasso Public Schools | `applitrack/owassops-applitrack-selenium.py` | Gen 1+ | Unconfirmed |
+| Broken Arrow Public Schools | `applitrack/baps-applitrack-selenium.py` | Gen 2 | Confirmed |
+| Coweta Public Schools | `applitrack/cowetaps-applitrack-selenium.py` | Gen 2 | Confirmed |
+| Owasso Public Schools | `applitrack/owassops-applitrack-selenium.py` | Gen 2 | Confirmed |
 
 ---
 
@@ -69,16 +69,26 @@
 
 | Company | File | Gen | Status |
 |---------|------|-----|--------|
-| AAA | `workday/aaa-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
-| AEP | `workday/aep-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
-| Aristocrat | `workday/aristocrat-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
+| AAA Club Alliance | `workday/aaa-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
+| AAON, Inc. | `workday/aaon-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
+| AEP | `workday/archive/aep-workday-api-selenium-scrape.py` | Gen 1+ | Deprecated |
+| Airgas | `workday/airgas-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
+| Aristocrat | `workday/aristocrat-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
 | ChampionX | `workday/championx-workday-api-selenium-scrape.py` | Gen 1+ | Unconfirmed |
-| Greenheck | `workday/greenheck-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
-| ONEOK | `workday/oneok-workday-api-scrape-selenium.py` | Gen 2 | Unconfirmed |
-| Relation Insurance | `workday/relation-workday-api-scrape-selenium.py` | Gen 2 | Unconfirmed |
+| ConocoPhillips | `workday/conocophillips-workday-api-selenium.py` | Gen 2 | Confirmed |
+| Grand River Dam Authority (GRDA) | `workday/grda-workday-api-selenium.py` | Gen 2 | Confirmed |
+| Greenheck | `workday/greenheck-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
+| ONEOK | `workday/oneok-workday-api-scrape-selenium.py` | Gen 2 | Confirmed |
+| Relation Insurance | `workday/relation-workday-api-scrape-selenium.py` | Gen 2 | Confirmed |
+| Saint Francis Health (Glenpool) | `workday/sfh-glenpool-workday-api-selenium.py` | Gen 2 | Confirmed |
+| Saint Francis Health (Laureate Psychiatric Clinic) | `workday/sfh-laureate-workday-api-selenium.py` | Gen 2 | Confirmed |
+| Saint Francis Health (Main Hospital) | `workday/sfh-main-workday-api-selenium.py` | Gen 2 | Confirmed |
+| Saint Francis Health (Warren Clinic) | `workday/sfh-warren-clinic-workday-api-selenium.py` | Gen 2 | Confirmed |
+| Saint Francis Hospital South | `workday/stfrancis-hosp-south-workday-api-selenium.py` | Gen 2 | Confirmed |
+| TD Williamson | `workday/tdwilliamson-workday-api-selenium.py` | Gen 2 | Confirmed |
 | Tulsa County Sheriff's Office | `workday/tcso-scrape-selenium.py` | Gen 1 | Unconfirmed |
-| Webco Industries | `workday/webco-workday-scrape-selenium.py` | Gen 2 | Unconfirmed |
-| Williams Companies | `workday/williams-workday-api-selenium-scrape.py` | Gen 2 | Unconfirmed |
+| Webco Industries | `workday/webco-workday-scrape-selenium.py` | Gen 2 | Confirmed |
+| Williams Companies | `workday/williams-workday-api-selenium-scrape.py` | Gen 2 | Confirmed |
 
 ---
 
